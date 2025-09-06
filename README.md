@@ -7,6 +7,7 @@
 - [Usage Examples](#usage-examples)
 - [Use Cases](#use-cases)
 - [API Reference](#api-reference)
+- [Testing](#testing)
 - [References](#references)
 - [License](#license)
 - [Acknowledgment](#acknowledgment)
@@ -54,6 +55,25 @@ Coming soon
 
 ## API Reference
 Coming soon
+
+## Testing
+Automated tests are executed on GitHub Actions for every push and pull request. For local development, you can also run the tests manually:
+
+```bash
+python run_tests.py
+```
+
+Alternatively, if you prefer using `pytest`, install it first:
+
+```bash
+pip install pytest
+```
+
+Then, trigger the test modules:
+
+```bash
+PYTHONPATH=. pytest -v
+```
 
 ## License
 Licensed under the MIT License – see [LICENSE](./LICENSE) for details.
