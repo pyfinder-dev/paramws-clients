@@ -1,3 +1,5 @@
+[![Run tests](https://github.com/sceylan/paramws-clients/actions/workflows/tests.yml/badge.svg)](https://github.com/sceylan/paramws-clients/actions/workflows/tests.yml)
+
 # paramws-clients
 
 ## Table of Contents
@@ -8,7 +10,6 @@
 - [Use Cases](#use-cases)
 - [API Reference](#api-reference)
 - [Testing](#testing)
-- [References](#references)
 - [License](#license)
 - [Acknowledgment](#acknowledgment)
 
