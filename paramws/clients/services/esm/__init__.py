@@ -1,2 +1,2 @@
 # -*- coding: utf-8 -*-
-from .shakemap_ws import ESMShakeMapWebService
+from .shakemap_connector import ESMShakeMapConnector

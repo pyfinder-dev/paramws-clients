@@ -1,6 +1,6 @@
 # -*-coding: utf-8 -*-
 from .base_client import BaseClient, MissingRequiredOption
-from .services import RRSMShakeMapWebService, RRSMPeakMotionWebService
+from .services import RRSMShakeMapConnector, RRSMPeakMotionConnector
 
 class RRSMPeakMotionClient(BaseClient):
     """ 
@@ -51,9 +51,9 @@ class RRSMPeakMotionClient(BaseClient):
     def get_stations(self):
         return self.amplitude_data.get_stations()
     
-    def create_web_service(self)->RRSMPeakMotionWebService:
+    def create_web_service(self)->RRSMPeakMotionConnector:
         """ Creates a new ESM shakemap web service client. """
-        self.ws_client = RRSMPeakMotionWebService(
+        self.ws_client = RRSMPeakMotionConnector(
             agency=self.agency, base_url=self.base_url, 
             end_point=self.end_point, version=self.version)
 
@@ -137,9 +137,9 @@ class RRSMShakeMapClient(BaseClient):
     def get_stations(self):
         return self.amplitude_data.get_stations()
     
-    def create_web_service(self)->RRSMShakeMapWebService:
+    def create_web_service(self)->RRSMShakeMapConnector:
         """ Creates a new ESM shakemap web service client. """
-        self.ws_client = RRSMShakeMapWebService(
+        self.ws_client = RRSMShakeMapConnector(
             agency=self.agency, base_url=self.base_url, 
             end_point=self.end_point, version=self.version)
 

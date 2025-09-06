@@ -1,6 +1,6 @@
 # -*-coding: utf-8 -*-
 from .base_client import BaseClient, MissingRequiredOption
-from .services import ESMShakeMapWebService
+from .services import ESMShakeMapConnector
 
 class ESMShakeMapClient(BaseClient):
     """ 
@@ -89,9 +89,9 @@ class ESMShakeMapClient(BaseClient):
             self.event_options['flag'] = '0'
             self.amplitude_options['flag'] = '0'
         
-    def create_web_service(self)->ESMShakeMapWebService:
+    def create_web_service(self)->ESMShakeMapConnector:
         """ Creates a new ESM shakemap web service client. """
-        self.ws_client = ESMShakeMapWebService(
+        self.ws_client = ESMShakeMapConnector(
             agency=self.agency, base_url=self.base_url, 
             end_point=self.end_point, version=self.version)
 

@@ -2,13 +2,13 @@
 """Unit tests for the base client class."""
 import unittest
 from clients.services import InvalidOptionValue
-from clients.services import ESMShakeMapWebService
+from clients.services import ESMShakeMapConnector
 
 class TestESMShakeMapWebService(unittest.TestCase):
     """Unit tests for the ESM Shakemap web service client."""
     def test_url_build(self):
         # Test the build_url method.
-        client = ESMShakeMapWebService()
+        client = ESMShakeMapConnector()
         client.set_agency("ESM")
         client.set_version("1")
         client.set_end_point("shakemap")
@@ -19,7 +19,7 @@ class TestESMShakeMapWebService(unittest.TestCase):
 
     def test_url_build_with_valid_options(self):
         # Test the build_url method with valid, several options.
-        client = ESMShakeMapWebService()
+        client = ESMShakeMapConnector()
         client.set_agency("ESM")
         client.set_version("1")
         client.set_end_point("shakemap")
@@ -36,7 +36,7 @@ class TestESMShakeMapWebService(unittest.TestCase):
 
     def test_url_build_invalid_options(self):
         # Test the build_url with invalid flags.
-        client = ESMShakeMapWebService()
+        client = ESMShakeMapConnector()
         client.set_agency("ESM")
         client.set_version("1")
         client.set_end_point("shakemap")
@@ -52,7 +52,7 @@ class TestESMShakeMapWebService(unittest.TestCase):
        
     def test_url_build_invalid_value(self):
         # Test the build_url with invalid flags.
-        client = ESMShakeMapWebService()
+        client = ESMShakeMapConnector()
         client.set_agency("ESM")
         client.set_version("1")
         client.set_end_point("shakemap")
@@ -67,14 +67,14 @@ class TestESMShakeMapWebService(unittest.TestCase):
 
     def test_query_options(self):
         # Test the get_supported_options method.
-        client = ESMShakeMapWebService()
+        client = ESMShakeMapConnector()
         options = client.get_supported_options()
         self.assertEqual(options, ['eventid', 'catalog', 'format', 'flag', 'encoding'])
         
 
     def test_query_format_eventdat(self):
         # Test the query method.
-        client = ESMShakeMapWebService()
+        client = ESMShakeMapConnector()
         client.set_agency("ESM")
         client.set_version("1")
         client.set_end_point("shakemap")
@@ -96,7 +96,7 @@ class TestESMShakeMapWebService(unittest.TestCase):
       
     def test_query_format_event(self):
         # Test the query method.
-        client = ESMShakeMapWebService()
+        client = ESMShakeMapConnector()
         client.set_agency("ESM")
         client.set_version("1")
         client.set_end_point("shakemap")

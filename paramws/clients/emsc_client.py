@@ -1,6 +1,6 @@
 # -*-coding: utf-8 -*-
 from .base_client import BaseClient, MissingRequiredOption
-from .services import EMSCFeltReportWebService
+from .services import EMSCFeltReportConnector
 from .services.feltreport_data import FeltReportItensityData
 
 class EMSCFeltReportClient(BaseClient):
@@ -49,9 +49,9 @@ class EMSCFeltReportClient(BaseClient):
         return self.felt_report_options['unids'].replace(
             '[', '').replace(']', '')
     
-    def create_web_service(self)->EMSCFeltReportWebService:
+    def create_web_service(self)->EMSCFeltReportConnector:
         """ Creates a new EMSC felt report web service client. """
-        self.ws_client = EMSCFeltReportWebService(
+        self.ws_client = EMSCFeltReportConnector(
             agency=self.agency, base_url=self.base_url, 
             end_point=self.end_point, version=self.version)
 

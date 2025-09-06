@@ -1,13 +1,13 @@
 # -*- coding: utf-8 -*-
 import urllib
-from ..basewebservice import BaseWebService, InvalidOptionValue
+from ..baseconnector import BaseWebServiceConnector, InvalidOptionValue
 from .feltreport_parser import EMSCFeltReportParser
 
 class MissingRequiredFieldError(Exception):
     """ Exception raised when a required field is missing. """
     pass
 
-class EMSCFeltReportWebService(BaseWebService):
+class EMSCFeltReportConnector(BaseWebServiceConnector):
     """
     Class for EMSC felt report web service client.
 

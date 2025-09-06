@@ -1,6 +1,6 @@
 # -*-coding: utf-8 -*-
 from abc import ABC, abstractmethod
-from .services import BaseWebService
+from .services import BaseWebServiceConnector
 from .services.basedatastructure import BaseDataStructure
 
 class MissingRequiredOption(ValueError):
@@ -18,7 +18,7 @@ class BaseClient(ABC):
     """
     def __init__(self):
         # The actual client for the ESM shakemap web service.
-        self.ws_client:BaseWebService = None
+        self.ws_client:BaseWebServiceConnector = None
 
         # Event parameters from the shakemap format=event option.
         self.event_data: BaseDataStructure = None

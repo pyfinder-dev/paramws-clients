@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 import urllib
 import urllib.request as urlrequest
 from urllib.parse import urlparse
-from . import http
+from . import httphelpers
 
 class InvalidQueryOption(Exception):
     """ Raised when the given query option is not supported."""
@@ -14,7 +14,7 @@ class InvalidOptionValue(ValueError):
     """ Raised when the given query option value is not allowed."""
     pass
 
-class BaseWebService(ABC):
+class BaseWebServiceConnector(ABC):
     """ Base class for all web service clients."""
     def __init__(self, agency=None, base_url=None, end_point=None, version="1"):
         # The web service base URL, e.g. "https://esm-db.eu/fdsnws"
@@ -174,9 +174,9 @@ class BaseWebService(ABC):
         if (user is None and password is None) or self._force_redirect is True:
             # Redirect if no credentials are given or the force_redirect
             # flag is True.
-            handlers.append(http.CustomRedirectHandler())
+            handlers.append(httphelpers.CustomRedirectHandler())
         else:
-            handlers.append(http.NoRedirectionHandler())
+            handlers.append(httphelpers.NoRedirectionHandler())
         
         # Open the URL and get the response
         opener = urlrequest.build_opener(*handlers)

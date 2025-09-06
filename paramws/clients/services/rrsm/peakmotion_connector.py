@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
-from .shakemap_ws import RRSMShakeMapWebService
+from .shakemap_connector import RRSMShakeMapConnector
 from .peakmotion_parser import RRSMPeakMotionParser
 
-class RRSMPeakMotionWebService(RRSMShakeMapWebService):
+class RRSMPeakMotionConnector(RRSMShakeMapConnector):
     """ 
     This class is web service client for the RRSM peak motions.
     The RRSM peak motion web service complementary to the RRSM shakemap web
