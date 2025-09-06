@@ -1,7 +1,11 @@
 # -*- coding: utf-8 -*-
 import unittest
-from clients import ESMShakeMapClient
 
+try:
+    from paramws.clients import ESMShakeMapClient
+except ImportError:
+    from clients import ESMShakeMapClient
+    
 class TestESMClient(unittest.TestCase):
     def test_default_contructor(self):
         # Test the constructor with default values. 

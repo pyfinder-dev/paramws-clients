@@ -1,7 +1,10 @@
 # -*- coding: utf-8 -*-
 import unittest
-from clients import EMSCFeltReportClient
-
+try:
+    from paramws.clients import EMSCFeltReportClient
+except ImportError:
+    from clients import EMSCFeltReportClient
+    
 class TestESMClient(unittest.TestCase):
     def test_default_contructor(self):
         # Test the constructor with default values. 
