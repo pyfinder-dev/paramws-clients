@@ -33,7 +33,7 @@ More information on the web services implemented in this tool are avaliable on:
 - ESM: https://esm-db.eu/#/data_and_services/web_services and https://esm-db.eu//esmws/shakemap/1/
 - EMSC: https://www.emsc.eu/Earthquake_data/Data_queries.php
 
-For further information on FinDer, see the references below and [Swiss Seismological Service at ETH Zurich](http://www.seismo.ethz.ch/en/research-and-teaching/products-software/EEW/finite-fault-rupture-detector-finder/) web page.
+For further information on FinDer, see the references below and [Swiss Seismological Service at ETH Zurich](http://www.seismo.ethz.ch/en/knowledge/earthquake-data-and-analysis-tools/EEW/finite-fault-rupture-detector-finder/) web page.
 
 _**References**:_
 
