@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 """Unit tests for the base client class."""
 import unittest
-from clients.services import InvalidOptionValue
-from clients.services import ESMShakeMapConnector
+from paramws.clients.services import InvalidOptionValue
+from paramws.clients.services import ESMShakeMapConnector
 
 class TestESMShakeMapWebService(unittest.TestCase):
     """Unit tests for the ESM Shakemap web service client."""

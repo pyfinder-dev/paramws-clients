@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Unit tests for the base client class."""
 import unittest
-from clients.services import EMSCFeltReportConnector
+from paramws.clients.services import EMSCFeltReportConnector
 
 class TestEMSCFeltReportWebService(unittest.TestCase):
     """Unit tests for the RRSM Shakemap web service client."""

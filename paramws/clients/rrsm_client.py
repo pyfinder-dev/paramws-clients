@@ -1,10 +1,6 @@
 # -*-coding: utf-8 -*-
-try:
-    from paramws.clients.base_client import BaseClient, MissingRequiredOption
-    from paramws.clients.services import RRSMShakeMapConnector, RRSMPeakMotionConnector
-except ImportError:
-    from .base_client import BaseClient, MissingRequiredOption
-    from .services import RRSMShakeMapConnector, RRSMPeakMotionConnector
+from paramws.clients.base_client import BaseClient, MissingRequiredOption
+from paramws.clients.services import RRSMShakeMapConnector, RRSMPeakMotionConnector
 
 class RRSMPeakMotionClient(BaseClient):
     """ 

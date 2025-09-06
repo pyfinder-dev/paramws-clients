@@ -1,11 +1,7 @@
 # -*-coding: utf-8 -*-
 from abc import ABC, abstractmethod
-try:
-    from paramws.clients.services import BaseWebServiceConnector
-    from paramws.clients.services.basedatastructure import BaseDataStructure
-except ImportError:
-    from .services import BaseWebServiceConnector
-    from .services.basedatastructure import BaseDataStructure
+from paramws.clients.services import BaseWebServiceConnector
+from paramws.clients.services.basedatastructure import BaseDataStructure
 
 class MissingRequiredOption(ValueError):
     """ 

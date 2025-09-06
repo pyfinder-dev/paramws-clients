@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Unit tests for the base client class."""
 import unittest
-from clients.services import RRSMShakeMapConnector
+from paramws.clients.services import RRSMShakeMapConnector
 
 class TestRRSMShakeMapWebService(unittest.TestCase):
     """Unit tests for the RRSM Shakemap web service client."""

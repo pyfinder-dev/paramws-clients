@@ -1,10 +1,6 @@
 # -*- coding: utf-8 -*-
 import unittest
-
-try:
-    from paramws.clients import RRSMShakeMapClient, RRSMPeakMotionClient
-except ImportError:
-    from clients import RRSMShakeMapClient, RRSMPeakMotionClient
+from paramws.clients import RRSMShakeMapClient, RRSMPeakMotionClient
     
 class TestRRSMClient(unittest.TestCase):
     def test_default_contructor(self):

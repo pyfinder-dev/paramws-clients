@@ -1,9 +1,6 @@
 # -*- coding: utf-8 -*-
 import unittest
-try:
-    from paramws.clients import EMSCFeltReportClient
-except ImportError:
-    from clients import EMSCFeltReportClient
+from paramws.clients import EMSCFeltReportClient
     
 class TestESMClient(unittest.TestCase):
     def test_default_contructor(self):

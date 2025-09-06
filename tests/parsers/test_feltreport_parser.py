@@ -3,19 +3,14 @@ import unittest
 import os
 import sys
 import zipfile
-module_path = os.path.dirname(os.path.abspath(__file__))
-one_up = os.path.join(module_path, '..')
-sys.path.append(one_up)
-try:
-    from paramws.clients.services.emsc.feltreport_parser import EMSCFeltReportParser
-except ImportError:
-    from clients.services.emsc.feltreport_parser import EMSCFeltReportParser
+from paramws.clients.services.emsc.feltreport_parser import EMSCFeltReportParser
 
 
 class TestEMSCShakeMapParser(unittest.TestCase):
     """ Test the parser for ESM ShakeMap web service. """
     def test_EMSC_parse_testimonies(self):
         # Test if the downlinked zip file is handled properly.
+        module_path = os.path.dirname(os.path.abspath(__file__))
         zip_path = os.path.join(
             module_path, 'testdata', 'mt-export-single.zip')
         
@@ -31,6 +26,7 @@ class TestEMSCShakeMapParser(unittest.TestCase):
 
     def test_EMSC_intensities_integrity(self):
         # Test if the intensities correctly parsed. 
+        module_path = os.path.dirname(os.path.abspath(__file__))
         zip_path = os.path.join(
             module_path, 'testdata', 'mt-export-single.zip')
         

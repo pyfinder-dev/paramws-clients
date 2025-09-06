@@ -3,13 +3,7 @@ import unittest
 import os
 import sys
 module_path = os.path.dirname(os.path.abspath(__file__))
-one_up = os.path.join(module_path, '..')
-sys.path.append(one_up)
-
-try:
-    from paramws.clients.services.esm.shakemap_parser import ESMShakeMapParser
-except ImportError:
-    from clients.services.esm.shakemap_parser import ESMShakeMapParser
+from paramws.clients.services.esm.shakemap_parser import ESMShakeMapParser
 
 # Some real data from the ESM ShakeMap web service for testing.
 station_list = {

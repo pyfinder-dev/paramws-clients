@@ -1,25 +1,14 @@
 # -*- coding: utf-8 -*-
 import unittest
 import os
-import sys
-import zipfile
-module_path = os.path.dirname(os.path.abspath(__file__))
-one_up = os.path.join(module_path, '..')
-sys.path.append(one_up)
-try:
-    from paramws.clients.services.rrsm.peakmotion_parser import RRSMPeakMotionParser 
-    from paramws.clients.services.peakmotion_data import (PeakMotionStationData, 
-                                                  PeakMotionChannelData, 
-                                                  PeakMotionData)
-except ImportError:
-    from clients.services.rrsm.peakmotion_parser import RRSMPeakMotionParser 
-    from clients.services.peakmotion_data import (PeakMotionStationData, 
-                                                PeakMotionChannelData, 
-                                                PeakMotionData)
+from paramws.clients.services.rrsm.peakmotion_parser import RRSMPeakMotionParser 
+from paramws.clients.services.peakmotion_data import (
+    PeakMotionStationData, PeakMotionChannelData, PeakMotionData)
 
 class TestRRSMPeakMotionParser(unittest.TestCase):
     """ Test the parser for RRSM peak motion web service. """
     def test_json(self):
+        module_path = os.path.dirname(os.path.abspath(__file__))
         json_path = os.path.join(
             module_path, 'testdata', 'rrsm-peakmotion.json')
         

@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 import unittest
 import logging
-from utils import customlogger
+from paramws.utils import customlogger
 
 if __name__ == '__main__':
     # Initialize the logger for a small report at the end.
