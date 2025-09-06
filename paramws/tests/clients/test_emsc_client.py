@@ -36,7 +36,7 @@ class TestESMClient(unittest.TestCase):
         print("**********************************************")
         print(client.get_url())
         print("**********************************************")
-        
+
         if code != 200:
             self.skipTest("The web service is not available.")
             
@@ -56,5 +56,5 @@ class TestESMClient(unittest.TestCase):
 
         intensities = client.get_feltreports()
         self.assertIsNotNone(intensities)
-        self.assertEqual(intensities.get_event_id(), "20170919_0000091")
+        self.assertEqual(intensities.get_event_id(), "20161030_0000029")
         self.assertIsNotNone(intensities.get_intensities())

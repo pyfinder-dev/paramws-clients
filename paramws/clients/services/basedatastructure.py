@@ -96,23 +96,100 @@ class BaseDataStructure:
             raise ValueError("Data must be a dictionary, not a " + str(type(data_dict)))
         
     def get(self, field_name, default=None, *, required=False):
-        """Return the value of a field.
+        """Return the value of a field, supporting dotted paths and lists.
 
-        Parameters
-        ----------
-        field_name : str
-            Name of the field to retrieve.
-        default : Any, optional
-            Value to return if the field does not exist (defaults to None).
-        required : bool, optional (must be passed with keyword-only)
-            If True and the field does not exist, raise a KeyError instead of
-            returning the default.
+        Examples
+        --------
+        get("time") -> top-level key
+        get("features.time") -> nested dict path
+        get("features.0.time") -> list index via dot-number
+        get("features[0].time") -> list index via bracket syntax
+        get("features[0]") -> top-level list indexing
+        get("features[0].properties.time") -> list index via bracket syntax and nested dict
+
+        Notes
+        -----
+        If a list is encountered without an explicit index, the first element
+        is used by default. Set `required=True` to raise on missing paths,
+        empty lists, or out-of-range indices.
         """
-        if field_name in self._data:
-            return self._data[field_name]
-        if required:
-            raise KeyError(f"Field '{field_name}' does not exist.")
-        return default
+        data = self._data
+
+        # Simple top-level key (no dotted path and no bracket indexing)
+        if not isinstance(field_name, str) or ("." not in field_name and "[" not in field_name):
+            if field_name in data:
+                return data[field_name]
+            if required:
+                raise KeyError(f"Field '{field_name}' does not exist.")
+            return default
+
+        # Build path parts (allow bracket-only like 'features[0]')
+        parts = field_name.split('.') if '.' in field_name else [field_name]
+        cur = data
+        n = len(parts)
+
+        i = 0
+        while i < n:
+            raw = parts[i]
+
+            # Extract optional bracket index: name[2]
+            name = raw
+            bracket_idx = None
+            if '[' in raw and raw.endswith(']'):
+                name, idx_str = raw.split('[', 1)
+                idx_str = idx_str[:-1]
+                if idx_str.isdigit():
+                    bracket_idx = int(idx_str)
+                else:
+                    if required:
+                        raise KeyError(f"Invalid list index '{idx_str}' in path '{field_name}'.")
+                    return default
+
+            # Step into dict by key
+            if isinstance(cur, dict):
+                if name in cur:
+                    cur = cur[name]
+                else:
+                    if required:
+                        raise KeyError(f"Field path '{field_name}' not found at '{name}'.")
+                    return default
+            else:
+                if required:
+                    raise KeyError(f"Field path '{field_name}' not found at segment '{name}'.")
+                return default
+
+            # If current value is a list, index into it
+            if isinstance(cur, list):
+                # 1) explicit bracket index provided at this segment
+                if bracket_idx is not None:
+                    if 0 <= bracket_idx < len(cur):
+                        cur = cur[bracket_idx]
+                    else:
+                        if required:
+                            raise KeyError(f"Index {bracket_idx} out of range at segment '{name}' for path '{field_name}'.")
+                        return default
+                # 2) allow dot-number in the NEXT segment (e.g., 'features.0.time')
+                elif i + 1 < n and parts[i + 1].isdigit():
+                    idx = int(parts[i + 1])
+                    if 0 <= idx < len(cur):
+                        cur = cur[idx]
+                        i += 1  # consume the numeric segment
+                    else:
+                        if required:
+                            raise KeyError(f"Index {idx} out of range at segment '{name}' for path '{field_name}'.")
+                        return default
+                # 3) fallback to first element if available
+                else:
+                    if cur:
+                        cur = cur[0]
+                    else:
+                        if required:
+                            raise KeyError(f"List at segment '{name}' is empty for path '{field_name}'.")
+                        return default
+
+            i += 1
+
+        return cur
     
     def set(self, field_name, value, add_if_not_exist=False):
         """ 
@@ -172,4 +249,3 @@ if __name__ == "__main__":
 
     dst.set('event_lat', 38.8, add_if_not_exist=True)
     print(dst.get('event_lat'))
-    
