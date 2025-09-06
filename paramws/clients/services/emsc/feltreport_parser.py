@@ -4,8 +4,12 @@ import os
 import zipfile
 import json
 import urllib
-from ..baseparser import BaseParser
-from ..feltreport_data import FeltReportEventData, FeltReportIntensityData
+try:
+    from paramws.clients.services.baseparser import BaseParser
+    from paramws.clients.services.feltreport_data import FeltReportEventData, FeltReportIntensityData
+except ImportError:
+    from ..baseparser import BaseParser
+    from ..feltreport_data import FeltReportEventData, FeltReportIntensityData
 
 class EMSCFeltReportParser(BaseParser):
     """

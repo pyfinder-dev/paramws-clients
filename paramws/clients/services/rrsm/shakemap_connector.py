@@ -1,7 +1,11 @@
 # -*- coding: utf-8 -*-
 import urllib
-from .shakemap_parser import RRSMShakeMapParser
-from ..esm.shakemap_connector import ESMShakeMapConnector
+try:
+    from paramws.clients.services.rrsm.shakemap_parser import RRSMShakeMapParser
+    from paramws.clients.services.esm.shakemap_connector import ESMShakeMapConnector
+except ImportError:
+    from .shakemap_parser import RRSMShakeMapParser
+    from ..esm.shakemap_connector import ESMShakeMapConnector
 
 class RRSMShakeMapConnector(ESMShakeMapConnector):
     """ 

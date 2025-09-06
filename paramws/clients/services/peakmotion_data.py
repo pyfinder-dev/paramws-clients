@@ -1,5 +1,8 @@
 # -*- coding: utf-8 -*- 
-from .basedatastructure import BaseDataStructure
+try:
+    from paramws.clients.services.basedatastructure import BaseDataStructure
+except ImportError:
+    from .basedatastructure import BaseDataStructure
 
 class PeakMotionChannelData(BaseDataStructure):
     """ Encapsulates the channel data for calling members with dot."""

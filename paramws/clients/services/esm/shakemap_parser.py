@@ -1,11 +1,18 @@
 # -*- coding: utf-8 -*-
 import datetime
 import xmltodict
-from ..baseparser import BaseParser
-from ..shakemap_data import ShakeMapEventData
-from ..shakemap_data import ShakeMapStationAmplitudes
-from ..shakemap_data import ShakeMapStationNode
-from ..shakemap_data import ShakeMapComponentNode
+try:
+    from paramws.clients.services.baseparser import BaseParser
+    from paramws.clients.services.shakemap_data import ShakeMapEventData
+    from paramws.clients.services.shakemap_data import ShakeMapStationAmplitudes
+    from paramws.clients.services.shakemap_data import ShakeMapStationNode
+    from paramws.clients.services.shakemap_data import ShakeMapComponentNode
+except ImportError:
+    from ..baseparser import BaseParser
+    from ..shakemap_data import ShakeMapEventData
+    from ..shakemap_data import ShakeMapStationAmplitudes
+    from ..shakemap_data import ShakeMapStationNode
+    from ..shakemap_data import ShakeMapComponentNode
 
 class ESMShakeMapParser(BaseParser):
     """

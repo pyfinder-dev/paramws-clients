@@ -1,2 +1,7 @@
 # -*- coding: utf-8 -*-
-from .shakemap_connector import RRSMShakeMapConnector
+try:
+    from paramws.clients.services.baseconnector import BaseWebServiceConnector
+    from paramws.clients.services.rrsm.shakemap_connector import RRSMShakeMapConnector
+except ImportError:
+    from ..baseconnector import BaseWebServiceConnector
+    from .shakemap_connector import RRSMShakeMapConnector

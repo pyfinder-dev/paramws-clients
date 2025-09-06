@@ -1,7 +1,12 @@
 # -*-coding: utf-8 -*-
-from .base_client import BaseClient, MissingRequiredOption
-from .services import EMSCFeltReportConnector
-from .services.feltreport_data import FeltReportIntensityData
+try:
+    from paramws.clients.base_client import BaseClient, MissingRequiredOption
+    from paramws.clients.services import EMSCFeltReportConnector
+    from paramws.clients.services.feltreport_data import FeltReportIntensityData
+except ImportError:
+    from .base_client import BaseClient, MissingRequiredOption
+    from .services import EMSCFeltReportConnector
+    from .services.feltreport_data import FeltReportIntensityData
 
 class EMSCFeltReportClient(BaseClient):
     """
