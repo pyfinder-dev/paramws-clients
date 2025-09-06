@@ -6,7 +6,10 @@ import zipfile
 module_path = os.path.dirname(os.path.abspath(__file__))
 one_up = os.path.join(module_path, '..')
 sys.path.append(one_up)
-from clients.services.emsc.feltreport_parser import EMSCFeltReportParser
+try:
+    from paramws.clients.services.emsc.feltreport_parser import EMSCFeltReportParser
+except ImportError:
+    from clients.services.emsc.feltreport_parser import EMSCFeltReportParser
 
 
 class TestEMSCShakeMapParser(unittest.TestCase):
