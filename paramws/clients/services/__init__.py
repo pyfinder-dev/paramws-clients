@@ -13,4 +13,4 @@ from .baseconnector import InvalidQueryOption, InvalidOptionValue
 # Data structures
 from .peakmotion_data import PeakMotionData, PeakMotionStationData, PeakMotionChannelData
 from .shakemap_data import ShakeMapEventData, ShakeMapComponentNode, ShakeMapStationAmplitudes, ShakeMapStationNode
-from .feltreport_data import FeltReportEventData, FeltReportItensityData
+from .feltreport_data import FeltReportEventData, FeltReportIntensityData

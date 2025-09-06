@@ -7,6 +7,6 @@ from .emsc_client import EMSCFeltReportClient
 
 # Data structures from the services module for ease of import
 from .services import (PeakMotionData, ShakeMapEventData, FeltReportEventData, 
-                       FeltReportItensityData, PeakMotionStationData, 
+                       FeltReportIntensityData, PeakMotionStationData, 
                        PeakMotionChannelData, ShakeMapComponentNode, 
                        ShakeMapStationAmplitudes, ShakeMapStationNode)

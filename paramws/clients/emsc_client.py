@@ -1,7 +1,7 @@
 # -*-coding: utf-8 -*-
 from .base_client import BaseClient, MissingRequiredOption
 from .services import EMSCFeltReportConnector
-from .services.feltreport_data import FeltReportItensityData
+from .services.feltreport_data import FeltReportIntensityData
 
 class EMSCFeltReportClient(BaseClient):
     """
@@ -70,7 +70,7 @@ class EMSCFeltReportClient(BaseClient):
         feltreport_dict = \
             super().get_feltreports()[self.get_event_id()]
         
-        return FeltReportItensityData(feltreport_dict)
+        return FeltReportIntensityData(feltreport_dict)
     
     def query(self, event_id=None, **other_options):
         """ Query the web service for earthquake information. """

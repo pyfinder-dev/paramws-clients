@@ -5,7 +5,7 @@ import zipfile
 import json
 import urllib
 from ..baseparser import BaseParser
-from ..feltreport_data import FeltReportEventData, FeltReportItensityData
+from ..feltreport_data import FeltReportEventData, FeltReportIntensityData
 
 class EMSCFeltReportParser(BaseParser):
     """
@@ -99,7 +99,7 @@ class EMSCFeltReportParser(BaseParser):
                                 'intensities': _intensities, 
                                 'comments': _comment_string}}
 
-    def parse_testimonies(self, data)->FeltReportItensityData:
+    def parse_testimonies(self, data)->FeltReportIntensityData:
         """
         "data" is a zip file containing the intensity data in comma-seperated
         txt format. There might be more than one files, with file names 
@@ -125,7 +125,7 @@ class EMSCFeltReportParser(BaseParser):
             
         else:
             # Create the data structure to store the intensity data
-            intensities = FeltReportItensityData()
+            intensities = FeltReportIntensityData()
 
             # The zip file contains text files for intensities.
             # In case there are more than files included, loop

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*- 
 from .basedatastructure import BaseDataStructure
 
-class FeltReportItensityData(BaseDataStructure):
+class FeltReportIntensityData(BaseDataStructure):
     """ Data structure for feltreport intensities """
     def __init__(self, data_dict=None, **kwargs):
         super().__init__(data_dict=data_dict, kwargs=kwargs)
