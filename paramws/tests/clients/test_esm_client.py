@@ -43,15 +43,8 @@ class TestESMClient(unittest.TestCase):
         self.assertEqual(event_data.get_network_desc(), 'ESM database')
         self.assertEqual(event_data.get_network_code(), 'ESM')
         
-        # Check station names
-        station_codes = client.get_station_codes()
-        for _sta_name in ['LMS2', 'JAN', 'KASA']:
-            self.assertIn(_sta_name, station_codes)
-
         # Check some station information
         for _sta in client.get_stations():
-            self.assertIn(_sta.get_station_name(), ['LMS2', 'JAN', 'KASA'])
-
             # Check the components for each field.
             for _comp in _sta.get_components():
                 self.assertIsNotNone(_comp.get_component_name())

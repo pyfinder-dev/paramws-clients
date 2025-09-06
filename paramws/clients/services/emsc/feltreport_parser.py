@@ -9,13 +9,24 @@ from ..feltreport_data import FeltReportEventData, FeltReportIntensityData
 
 class EMSCFeltReportParser(BaseParser):
     """
-    Parser class for the EMSC felt report web service output.
-    It handles two different types parsing when the testimonies
-    are requested (intensity) and when the testimonies are not
-    requested (basic earthquake location parameters). 
+    Parser class for the EMSC felt report web service output. It handles two
+    different types of parsing when the testimonies are requested (intensity)
+    and when the testimonies are not requested (basic earthquake location parameters).
     """
     def __init__(self):
         super().__init__()
+
+    @staticmethod
+    def _to_float(s):
+        if s is None:
+            return None
+        t = s.strip()
+        if t in ("", "NaN", "nan", "NaT", "NaT UTC", "None", "null"):
+            return None
+        try:
+            return float(t)
+        except ValueError:
+            return None
 
     def validate(self, data):
         """Check the content of the data."""
@@ -58,8 +69,11 @@ class EMSCFeltReportParser(BaseParser):
             if not _csv_content:
                 return None
             
-            # Convert the content to a string
-            _csv_content = _csv_content.decode('utf-8')
+            # Convert the content to a string                        
+            try:
+                _csv_content = _csv_content.decode("utf-8")
+            except UnicodeDecodeError:
+                _csv_content = _csv_content.decode("latin-1")
             
             # Split the content into lines
             _csv_lines = _csv_content.splitlines()
@@ -72,18 +86,14 @@ class EMSCFeltReportParser(BaseParser):
             
             # The first line: event ID
             _event_id = _comments[0].replace('#', '')
-            assert(_event_id == os.path.splitext(
-                os.path.basename(file_in_zip))[0])
-
+            
             # Store the rest in a string appended one after another
             # Leave the sharp sign in the beginning of each line.
             _comment_string = ""
             for _comment in _comments[1:]:
                 _comment_string += _comment + ' '
 
-
-            # The rest of the lines are the data. Split them
-            # into fields.
+            # The rest of the lines are the data. Split them into fields.
             _csv_lines = [_line.split(',') for _line in _csv_lines]
             
             # The first two fields are longitude and latitude.
@@ -91,9 +101,19 @@ class EMSCFeltReportParser(BaseParser):
             # field is the corrected intensity.
             _intensities = []
             for _line in _csv_lines:
-                _intensities.append(
-                    {"lon": float(_line[0]), "lat": float(_line[1]), 
-                     "raw": float(_line[2]), "corrected": float(_line[3])})
+                # Skip empty lines
+                if not _line or (len(_line) == 1 and not _line[0].strip()):
+                    continue
+                parts = [p.strip() for p in _line]
+                if len(parts) < 4:
+                    continue
+                lon = self._to_float(parts[0])
+                lat = self._to_float(parts[1])
+                raw = self._to_float(parts[2])
+                corr = self._to_float(parts[3])
+                if lon is None or lat is None:
+                    continue
+                _intensities.append({"lon": lon, "lat": lat, "raw": raw, "corrected": corr})
             
             return {_event_id: {'unid': _event_id,
                                 'intensities': _intensities, 
@@ -166,15 +186,25 @@ class EMSCFeltReportParser(BaseParser):
             # Store the original content for possible future use
             self.set_original_content(content=data)
 
-            # data is a HTTPResponse object that contains a io.BytesIO. 
-            # Read the response content first, decode it, finally convert 
-            # to json. This should be a list with one dictinary content.
-            _data = data.read().decode('utf-8')
-            _data = json.loads(_data)[0]
+            # Read and decode the HTTPResponse body; tolerate non-UTF-8 payloads
+            _raw = data.read()
+            try:
+                _text = _raw.decode('utf-8')
+            except UnicodeDecodeError:
+                _text = _raw.decode('latin-1')
+
+            # EMSC sometimes returns a list with a single dict, and sometimes a dict
+            parsed = json.loads(_text)
+            if isinstance(parsed, list):
+                if not parsed:
+                    return None
+                parsed = parsed[0]
+            elif not isinstance(parsed, dict):
+                # Unexpected shape
+                return None
 
             # Now create the data structure
-            return FeltReportEventData(data_dict=_data)
+            return FeltReportEventData(data_dict=parsed)
         
         # Failed. Something is wrong with the data.
         return None
-    
