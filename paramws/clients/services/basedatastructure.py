@@ -1,9 +1,6 @@
 # -*- coding: utf-8 -*-
-try:
-    from paramws.utils.nested_get import nested_get
-except ImportError:
-    from utils.nested_get import nested_get
 import copy
+from paramws.utils.nested_get import nested_get
 
 class BaseDataStructure:
     """ 

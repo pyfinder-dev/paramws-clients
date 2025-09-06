@@ -1,8 +1,5 @@
 # -*- coding: utf-8 -*- 
-try:
-    from paramws.clients.services.basedatastructure import BaseDataStructure
-except ImportError:
-    from .basedatastructure import BaseDataStructure
+from paramws.clients.services.basedatastructure import BaseDataStructure
 
 class FeltReportIntensityData(BaseDataStructure):
     """ Data structure for feltreport intensities """

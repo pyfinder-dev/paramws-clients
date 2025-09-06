@@ -1,8 +1,5 @@
 # -*- coding: utf-8 -*-
-try:
-    from paramws.clients.services.esm.shakemap_parser import ESMShakeMapParser
-except ImportError:
-    from ..esm.shakemap_parser import ESMShakeMapParser
+from paramws.clients.services.esm.shakemap_parser import ESMShakeMapParser
 
 class RRSMShakeMapParser(ESMShakeMapParser):
     """ 

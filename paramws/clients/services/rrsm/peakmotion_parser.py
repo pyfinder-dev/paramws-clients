@@ -1,14 +1,10 @@
 # -*- coding: utf-8 -*-
 import io
 import json
-try:
-    from paramws.clients.services.baseparser import BaseParser
-    from paramws.clients.services.peakmotion_data import (
-        PeakMotionData, PeakMotionStationData, PeakMotionChannelData, PeakMotionEventData)
-except ImportError:
-    from ..baseparser import BaseParser
-    from ..peakmotion_data import (
-        PeakMotionData, PeakMotionStationData, PeakMotionChannelData, PeakMotionEventData)
+from paramws.clients.services.baseparser import BaseParser
+from paramws.clients.services.peakmotion_data import (
+    PeakMotionData, PeakMotionStationData, 
+    PeakMotionChannelData, PeakMotionEventData)
 
 class RRSMPeakMotionParser(BaseParser):
     """ Parses the peak motion data from RRSM. The peak motion

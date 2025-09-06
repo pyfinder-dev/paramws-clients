@@ -1,16 +1,7 @@
 # -*- coding: utf-8 -*-
-import os
-import sys
 import urllib
-# module_path = os.path.abspath(__file__)
-# parent_dir = os.path.dirname(module_path)
-# sys.path.append(parent_dir)
-try:
-    from paramws.clients.services.baseconnector import BaseWebServiceConnector
-    from paramws.clients.services.esm.shakemap_parser import ESMShakeMapParser
-except ImportError:
-    from ..baseconnector import BaseWebServiceConnector
-    from .shakemap_parser import ESMShakeMapParser
+from paramws.clients.services.baseconnector import BaseWebServiceConnector
+from paramws.clients.services.esm.shakemap_parser import ESMShakeMapParser
 
 class ESMShakeMapConnector(BaseWebServiceConnector):
     """

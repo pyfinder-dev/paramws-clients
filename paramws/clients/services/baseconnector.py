@@ -4,10 +4,7 @@ from abc import ABC, abstractmethod
 import urllib
 import urllib.request as urlrequest
 from urllib.parse import urlparse
-try:
-    from paramws.utils import httphelpers
-except ImportError:
-    from . import httphelpers
+from paramws.utils import httphelpers
 
 class InvalidQueryOption(Exception):
     """ Raised when the given query option is not supported."""

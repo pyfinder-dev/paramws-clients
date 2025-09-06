@@ -1,10 +1,6 @@
 # -*- coding: utf-8 -*-
-try:
-    from paramws.clients.services.rrsm.shakemap_connector import RRSMShakeMapConnector
-    from paramws.clients.services.rrsm.peakmotion_parser import RRSMPeakMotionParser
-except ImportError:
-    from .shakemap_connector import RRSMShakeMapConnector
-    from .peakmotion_parser import RRSMPeakMotionParser
+from paramws.clients.services.rrsm.shakemap_connector import RRSMShakeMapConnector
+from paramws.clients.services.rrsm.peakmotion_parser import RRSMPeakMotionParser
 
 class RRSMPeakMotionConnector(RRSMShakeMapConnector):
     """ 

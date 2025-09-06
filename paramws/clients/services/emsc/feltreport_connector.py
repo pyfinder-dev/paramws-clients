@@ -1,11 +1,7 @@
 # -*- coding: utf-8 -*-
 import urllib
-try:
-    from paramws.clients.services.baseconnector import BaseWebServiceConnector, InvalidOptionValue
-    from paramws.clients.services.emsc.feltreport_parser import EMSCFeltReportParser
-except ImportError:
-    from ..baseconnector import BaseWebServiceConnector, InvalidOptionValue
-    from .feltreport_parser import EMSCFeltReportParser
+from paramws.clients.services.baseconnector import BaseWebServiceConnector, InvalidOptionValue
+from paramws.clients.services.emsc.feltreport_parser import EMSCFeltReportParser
 
 class MissingRequiredFieldError(Exception):
     """ Exception raised when a required field is missing. """
