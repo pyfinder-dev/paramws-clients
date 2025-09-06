@@ -24,10 +24,8 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -e .
           pip install pytest
 
       - name: Run tests
         run: |
-          pytest -v
-
+          PYTHONPATH=. pytest -v
