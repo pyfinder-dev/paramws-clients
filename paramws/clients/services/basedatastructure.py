@@ -76,20 +76,7 @@ class BaseDataStructure:
             return []
         else:
             return self._data.items()
-        
-    def _get(self, key):
-        """ 
-        Internal get method that returns the value of the given key. 
-        If the key does not exist, returns None. Shortcut for get() 
-        with try-except block because get() needs to raise an exception 
-        when the key does not exist if data is manipulated outside 
-        this class or its sub-classes.
-        """
-        try:
-            return self.get(key)
-        except: 
-            return None
-        
+            
     def get_data(self):
         """ 
         Return the data dictionary itself in case the rather
@@ -108,13 +95,24 @@ class BaseDataStructure:
         else:
             raise ValueError("Data must be a dictionary, not a " + str(type(data_dict)))
         
-    def get(self, field_name):
-        """ Return the value of a field. """
-        try:
-            return self._data.get(field_name)
-        except KeyError:
-            raise AttributeError(f"'{self.__class__.__name__}'"
-                                 " object has no attribute '{field_name}'")
+    def get(self, field_name, default=None, *, required=False):
+        """Return the value of a field.
+
+        Parameters
+        ----------
+        field_name : str
+            Name of the field to retrieve.
+        default : Any, optional
+            Value to return if the field does not exist (defaults to None).
+        required : bool, optional (must be passed with keyword-only)
+            If True and the field does not exist, raise a KeyError instead of
+            returning the default.
+        """
+        if field_name in self._data:
+            return self._data[field_name]
+        if required:
+            raise KeyError(f"Field '{field_name}' does not exist.")
+        return default
     
     def set(self, field_name, value, add_if_not_exist=False):
         """ 

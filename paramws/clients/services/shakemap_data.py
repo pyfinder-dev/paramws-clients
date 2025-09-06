@@ -12,51 +12,51 @@ class ShakeMapComponentNode(BaseDataStructure):
 
     def get_component_name(self):
         """ Return the channel name. """
-        return self._get('name')
+        return self.get('name')
     
     def get_component_depth(self):
         """ Return the depth. """
-        return self._get('depth')
+        return self.get('depth')
     
     def get_acceleration(self):
         """ Return the acceleration. """
-        return self._get('acc')
+        return self.get('acc')
     
     def get_acceleration_flag(self):
         """ Return the acceleration flag. """
-        return self._get('accflag')
+        return self.get('accflag')
     
     def get_velocity(self):
         """ Return the velocity. """
-        return self._get('vel')
+        return self.get('vel')
     
     def get_velocity_flag(self):
         """ Return the velocity flag. """
-        return self._get('velflag')
+        return self.get('velflag')
     
     def get_psa03(self):
         """ Return the PSA03. """
-        return self._get('psa03')
+        return self.get('psa03')
     
     def get_psa03_flag(self):
         """ Return the PSA03 flag. """
-        return self._get('psa03flag')
+        return self.get('psa03flag')
     
     def get_psa10(self):
         """ Return the PSA10. """
-        return self._get('psa10')
+        return self.get('psa10')
     
     def get_psa10_flag(self):
         """ Return the PSA10 flag. """
-        return self._get('psa10flag')
+        return self.get('psa10flag')
     
     def get_psa30(self):
         """ Return the PSA30. """
-        return self._get('psa30')
+        return self.get('psa30')
     
     def get_psa30_flag(self):
         """ Return the PSA30 flag. """
-        return self._get('psa30flag')
+        return self.get('psa30flag')
 
 
 class ShakeMapStationNode(BaseDataStructure):
@@ -74,36 +74,36 @@ class ShakeMapStationNode(BaseDataStructure):
         Return a List instance of components, i.e. channels. Each item 
         in the list is a again dictionary.
         """
-        return self._get('components')
+        return self.get('components')
 
     def get_station_id(self):
         """ Return the station id, which is {netid}.{station code} """
-        return self._get('id')
+        return self.get('id')
     
     def get_network_code(self):
         """ Return the network id/code. """
-        return self._get('netid')
+        return self.get('netid')
     
     def get_station_code(self):
         """ Return the network code. """
-        return self._get('code')
+        return self.get('code')
     
     def get_station_name(self):
         """ Return the station name. This is usually the same
         as the station code but may vary depending on the network."""
-        return self._get('name')
+        return self.get('name')
     
     def get_latitude(self):
         """ Return the station latitude. """
-        return self._get('lat')
+        return self.get('lat')
     
     def get_longitude(self):
         """ Return the station longitude. """
-        return self._get('lon')
+        return self.get('lon')
     
     def get_installation_type(self):
         """ Return the installation type. """
-        return self._get('insttype')
+        return self.get('insttype')
     
 class ShakeMapStationAmplitudes(BaseDataStructure):
     """
@@ -116,12 +116,12 @@ class ShakeMapStationAmplitudes(BaseDataStructure):
 
     def get_creation_time(self):
         """ Return the creation time of the data."""
-        return self._get('created')
+        return self.get('created')
     
     def get_stations(self):
         """ Return the list of stations. Each item in 
         the list is a dictionary. """
-        return self._get('stations')
+        return self.get('stations')
 
     def get_station_codes(self):
         """ Return the list of station codes. Each item in 
@@ -143,49 +143,49 @@ class ShakeMapEventData(BaseDataStructure):
         
     def get_creation_time(self):
         """ Return the creation time of the data."""
-        return self._get('created')
+        return self.get('created')
     
     def get_event_id(self):
         """ Return the event id. """
-        return self._get('id')
+        return self.get('id')
     
     def get_catalog(self):
         """ Return the catalog. """
-        return self._get('catalog')
+        return self.get('catalog')
     
     def get_latitude(self):
         """ Return the event latitude. """
-        return self._get('lat')
+        return self.get('lat')
     
     def get_longitude(self):
         """ Return the event longitude. """
-        return self._get('lon')
+        return self.get('lon')
     
     def get_magnitude(self):
         """ Return the event magnitude. """
-        return self._get('mag')
+        return self.get('mag')
     
     def get_depth(self):
         """ Return the event depth. """
-        return self._get('depth')
+        return self.get('depth')
     
     def get_origin_time(self):
         """ Return the origin time. """
-        return self._get('time') 
+        return self.get('time') 
     
     def get_time_zone(self):
         """ Return the time zone. """
-        return self._get('timezone')
+        return self.get('timezone')
     
     def get_network_code(self):
         """ Return the network id/code. """
-        return self._get('netid')
+        return self.get('netid')
     
     def get_network_desc(self):
         """ Return the network description. """
-        return self._get('network')
+        return self.get('network')
     
     def get_loc_string(self):
         """ Return the location string. """
-        return self._get('locstring')
+        return self.get('locstring')
         

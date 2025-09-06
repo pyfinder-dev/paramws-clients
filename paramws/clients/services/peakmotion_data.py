@@ -7,50 +7,50 @@ class PeakMotionChannelData(BaseDataStructure):
         super().__init__(data_dict, **kwargs)
 
     def get_channel_code(self):
-        return self._get('channel-code')
+        return self.get('channel-code')
     
     def get_acceleration(self):
         """ 
         Return the channel acceleration value.
         Same as get_channel_pga()
         """
-        return self._get('pga-value')
+        return self.get('pga-value')
     
     def get_channel_pga(self):
         """ 
         Return the channel PGA value.
         Same as get_acceleration()
         """
-        return self._get('pga-value')
+        return self.get('pga-value')
     
     def get_velocity(self):
         """ 
         Return the channel velocity value.
         Same as get_channel_pgv()
         """
-        return self._get('pgv-value')
+        return self.get('pgv-value')
     
     def get_channel_pgv(self):
         """ 
         Return the channel PGV value.
         Same as get_velocity()
         """
-        return self._get('pgv-value')
+        return self.get('pgv-value')
     
     def get_sensor_azimuth(self):
-        return self._get('sensor-azimuth')
+        return self.get('sensor-azimuth')
     
     def get_sensor_dip(self):
-        return self._get('sensor-dip')
+        return self.get('sensor-dip')
     
     def get_sensor_depth(self):
-        return self._get('sensor-depth')
+        return self.get('sensor-depth')
     
     def get_low_cut_corner(self):
-        return self._get('low-cut-corner')
+        return self.get('low-cut-corner')
     
     def get_high_cut_corner(self):
-        return self._get('high-cut-corner')
+        return self.get('high-cut-corner')
     
 class PeakMotionStationData(BaseDataStructure):
     """ Encapsulates the station data for calling members with dot."""
@@ -83,25 +83,25 @@ class PeakMotionStationData(BaseDataStructure):
         return [channel.get_channel_code() for channel in self.get_channels()]
         
     def get_station_code(self):
-        return self._get('station-code')
+        return self.get('station-code')
     
     def get_location_code(self):
-        return self._get('location-code')
+        return self.get('location-code')
     
     def get_latitude(self):
-        return self._get('station-latitude')
+        return self.get('station-latitude')
     
     def get_longitude(self):
-        return self._get('station-longitude')
+        return self.get('station-longitude')
     
     def get_elevation(self):
-        return self._get('station-elevation')
+        return self.get('station-elevation')
     
     def get_network_code(self):
-        return self._get('network-code')
+        return self.get('network-code')
     
     def get_epicentral_distance(self):
-        return self._get('epicentral-distance')
+        return self.get('epicentral-distance')
     
 class PeakMotionEventData(BaseDataStructure):
     """ Encapsulates the event data for calling members with dot."""
@@ -109,34 +109,34 @@ class PeakMotionEventData(BaseDataStructure):
         super().__init__(data_dict, **kwargs)
         
     def get_event_id(self):
-        return self._get('event-id')
+        return self.get('event-id')
     
     def get_latitude(self):
-        return self._get('event-latitude')
+        return self.get('event-latitude')
     
     def get_longitude(self):
-        return self._get('event-longitude')
+        return self.get('event-longitude')
     
     def get_depth(self):
-        return self._get('event-depth')
+        return self.get('event-depth')
     
     def get_event_location_reference(self):
-        return self._get('event-location-reference')
+        return self.get('event-location-reference')
     
     def get_event_magnitude_reference(self):
-        return self._get('event-magnitude-reference')
+        return self.get('event-magnitude-reference')
 
     def get_magnitude(self):
-        return self._get('event-magnitude')
+        return self.get('event-magnitude')
     
     def get_magnitude_type(self):
-        return self._get('magnitude-type')
+        return self.get('magnitude-type')
     
     def get_review_type(self):
-        return self._get('review-type')
+        return self.get('review-type')
     
     def get_origin_time(self):
-        return self._get('event-time')
+        return self.get('event-time')
     
 class PeakMotionData(BaseDataStructure):
     """ 
