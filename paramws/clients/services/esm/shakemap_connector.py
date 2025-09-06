@@ -5,14 +5,14 @@ from paramws.clients.services.esm.shakemap_parser import ESMShakeMapParser
 
 class ESMShakeMapConnector(BaseWebServiceConnector):
     """
-    Class for ESM Shakemap web service client.
+    Class for ESM Shakemap web service connector.
 
-    As in the case for each client, the class needs to override 
+    As in the case for each connector, the class needs to override 
     the following abstract methods:
     - parse_response(self, file_like_obj)
     - get_supported_options(self)
     - is_value_valid(self, option, value)
-    - buld_url(self, **options)
+    - build_url(self, **options)
     """
     def __init__(self, agency="ESM", base_url="https://esm-db.eu/esmws/", 
                  end_point="shakemap", version="1"):

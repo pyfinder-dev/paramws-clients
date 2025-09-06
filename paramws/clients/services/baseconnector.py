@@ -235,7 +235,7 @@ class BaseWebServiceConnector(ABC):
 
         last_exception = None
         for attempt in range(retries):
-            print(f"Attempt {attempt + 1} of {retries} to open URL: {url}")
+            # print(f"Attempt {attempt + 1} of {retries} to open URL: {url}")
             try:
                 url_response = opener.open(url, timeout=timeout)
                 code = url_response.getcode()
@@ -243,9 +243,9 @@ class BaseWebServiceConnector(ABC):
 
                 # Check for empty response content
                 if getattr(url_response, "length", None) == 0:
-                    print(f"Empty response received from the web service.")
+                    # print(f"Empty response received from the web service.")
                     raise ValueError("Empty response received from the web service.")
-                print(f"Response code: {code}")
+                # print(f"Response code: {code}")
                 return code, url_response, error
 
             except (urllib.error.HTTPError, urllib.error.URLError, ValueError) as e:
@@ -262,7 +262,7 @@ class BaseWebServiceConnector(ABC):
 
             # Wait before next retry if not the last attempt
             if attempt < retries - 1:
-                print(f"Retrying in {wait} seconds...")
+                # print(f"Retrying in {wait} seconds...")
                 time.sleep(wait)
 
         # After retries, return the last error

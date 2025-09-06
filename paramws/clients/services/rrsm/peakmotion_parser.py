@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-import io
 import json
 from paramws.clients.services.baseparser import BaseParser
 from paramws.clients.services.peakmotion_data import (
@@ -8,7 +7,7 @@ from paramws.clients.services.peakmotion_data import (
 
 class RRSMPeakMotionParser(BaseParser):
     """ Parses the peak motion data from RRSM. The peak motion
-    data includes event information as well as the PGA and PGV"""
+    data includes event information as well as the PGA and PGV """
     def __init__(self):
         super().__init__()
 
@@ -36,6 +35,7 @@ class RRSMPeakMotionParser(BaseParser):
                 raise ValueError("Invalid data. The content is not " +
                                  "a valid RRSM peak-motion json file. " + str(e))
             
+            # Initialize the main data structure for the RRSM peak motion
             _data_item = PeakMotionData()
 
             # Store the whole data at the very top level
@@ -58,8 +58,8 @@ class RRSMPeakMotionParser(BaseParser):
                              "review-type"]
             
             _channel_keys = ["channel-code", "pga-value", "pgv-value", 
-                                 "sensor-azimuth", "sensor-dip", "sensor-depth", 
-                                 "low-cut-corner", "high-cut-corner"]
+                             "sensor-azimuth", "sensor-dip", "sensor-depth", 
+                             "low-cut-corner", "high-cut-corner"]
             
             # Construct the event dict from the first node since it is repeated
             # for each station.
@@ -75,8 +75,10 @@ class RRSMPeakMotionParser(BaseParser):
                 _station_data = PeakMotionStationData()
                     
                 for _key in _station_keys:
-                    _station_data.set(_key, event_dict[_key],
-                                      add_if_not_exist=True)
+                    # Add the key. Force adding the key in case if not exists.
+                    _station_data.set(
+                        _key, event_dict[_key], add_if_not_exist=True)
+                    
                 _data_item.add_station(_station_data)
                     
                 # Construct the channel data dicts.
@@ -85,8 +87,10 @@ class RRSMPeakMotionParser(BaseParser):
                     _channel_data = PeakMotionChannelData()
                             
                     for _key in _channel_keys:
-                        _channel_data.set(_key, channel_dict[_key], 
-                                          add_if_not_exist=True)
+                        # Add the key. Force adding the key in case if not exists.
+                        _channel_data.set(
+                            _key, channel_dict[_key], add_if_not_exist=True)
+                        
                     _station_data.add_channel(_channel_data)
             
             # Return the main data structure

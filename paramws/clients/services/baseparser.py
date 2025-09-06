@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
+"""
+Base class for all parsers.
+"""
 from abc import ABC, abstractmethod
 
 class BaseParser(ABC):
-    """ Base class for all parsers."""
     def __init__(self):
         # Stores the original content of the data passed for parsing.
         self.original_content = None

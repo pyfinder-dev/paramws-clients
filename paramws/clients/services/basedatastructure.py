@@ -2,6 +2,7 @@
 import copy
 from paramws.utils.nested_get import nested_get
 
+
 class BaseDataStructure:
     """ 
     Base class for the data structure used to store the data retrieved
@@ -154,6 +155,7 @@ class BaseDataStructure:
         return str(self._data)
 
 if __name__ == "__main__":
+    # Simple test of the class
     dst = BaseDataStructure()
 
     dst.add_field('eventid')
@@ -168,3 +170,4 @@ if __name__ == "__main__":
 
     dst.set('event_lat', 38.8, add_if_not_exist=True)
     print(dst.get('event_lat'))
+    

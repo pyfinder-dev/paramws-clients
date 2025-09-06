@@ -5,10 +5,9 @@ from paramws.clients.services.esm.shakemap_connector import ESMShakeMapConnector
 
 class RRSMShakeMapConnector(ESMShakeMapConnector):
     """ 
-    Class for RRSM shakemap web service client. This client 
-    is similar to ESM shakemap client, but query has no options
-    other than a compulsory eventid; hence, needs to be handled 
-    slightly differently.
+    Class for RRSM shakemap web service connector. This connector is similar to the 
+    ESM shakemap connector, but query has no options other than a compulsory eventid; 
+    hence, needs to be handled slightly differently.
 
     It overrides these abstract methods:
     - parse_response(self, file_like_obj)
@@ -68,9 +67,9 @@ class RRSMShakeMapConnector(ESMShakeMapConnector):
 
         # Ensure the options dictionary is properly encoded as a 
         # URL-compatible string
-        options = urllib.parse.urlencode(options, safe=':/?&=', 
-                                         encoding='utf-8')
-        
+        options = urllib.parse.urlencode(
+            options, safe=':/?&=', encoding='utf-8')
+
         # Combine the URL
         self.combined_url = \
             f"{self.base_url}{self.version}/{self.end_point}?{options}" 

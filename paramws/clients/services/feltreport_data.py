@@ -26,10 +26,11 @@ class FeltReportEventData(BaseDataStructure):
         
     def get_event_deltatime(self):
         """ Return the event delta time. """
-        print(self.get_data())
-        print(self.get('features'))
-        print(self.get('features[0]'))
-        print(self.get('features[0].time'))
+        ## For debugging
+        # print(self.get_data())
+        # print(self.get('features'))
+        # print(self.get('features[0]'))
+        # print(self.get('features[0].time'))
         return self.get('ev_deltatime') or self.get('features[0].properties.time')
     
     def get_longitude(self):

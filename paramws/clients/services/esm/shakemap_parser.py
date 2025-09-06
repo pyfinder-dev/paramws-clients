@@ -9,10 +9,9 @@ from paramws.clients.services.shakemap_data import ShakeMapComponentNode
 
 class ESMShakeMapParser(BaseParser):
     """
-    Parser class for the ESM ShakeMap web service output.
-    The return from the web service is an XML file without
-    and style sheet. The parser converts the XML file to
-    a dictionary, and then creates a data structure.
+    Parser class for the ESM ShakeMap web service output. The return from 
+    the web service is an XML file without and style sheet. The parser converts
+    the XML file to a dictionary, and then creates a data structure.
     """
     def __init__(self):
         super().__init__()
