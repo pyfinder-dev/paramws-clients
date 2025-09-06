@@ -1,29 +1,27 @@
 @startuml
 !theme mars
-participant "User class" as user #darkgreen
-participant "WebServiceClient" as wsc
-participant "WebService" as ws
-participant "Parser" as p
+
+participant "External user module" as user #darkgreen
 database "Remote data\nservice" as ds order 40
+
+box "paramws package" 
+  participant "WebServiceClient" as wsc
+  participant "WebServiceConnector" as ws
+  participant "Parser" as p
+  control "DataStructure" as DStr
+end box
 
 user -> wsc: Request event data
 wsc -> ws: Query URL
-
-ws->ws: Validate request
+ws -> ws: Validate request
 ws -> ds: Send request
-
-ds --> ws: Return response
-
-ws->p **: Send response\ncontent for parsing
-
-create control DataStructure as DStr
-p->DStr: Initialize data structure
-
-p->p: Parse response
-p-->ws: Return data structure
+ds --> ws: Receive response
+ws -> p **: Send response\ncontent for parsing
+p -> DStr: Initialize data structure
+p -> p: Parse response
+p --> ws: Return data structure
 destroy p
 deactivate p
-
 ws --> wsc: Return data structure
 wsc --> user: Return data structure
 
