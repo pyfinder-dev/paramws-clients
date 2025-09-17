@@ -1,4 +1,4 @@
-[![Run tests](https://github.com/sceylan/paramws-clients/actions/workflows/tests.yml/badge.svg)](https://github.com/sceylan/paramws-clients/actions/workflows/tests.yml)
+[![Run tests](https://github.com/pyfinder-dev/paramws-clients/actions/workflows/tests.yml/badge.svg)](https://github.com/pyfinder-dev/paramws-clients/actions/workflows/tests.yml)
 
 # paramws-clients
 
