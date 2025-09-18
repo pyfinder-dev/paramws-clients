@@ -1,0 +1,39 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "paramws-clients"
+version = "0.1.0"
+description = "Clients for parametric web services used by PyFinder."
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.9"
+authors = [
+  { name = "Savas Ceylan" }
+]
+dependencies = [
+  "requests",
+  "xmltodict==0.12.0",
+  "urllib3",
+]
+
+# Optional: classifiers (adjust as needed)
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
+]
+
+# Expose a CLI later: Optional if I want to make this package 
+# run from command line as a tool 
+#[project.scripts]
+#paramws = "paramws.cli:main"
+
+[tool.setuptools]
+# Package is at the project root
+package-dir = {"" = "."}
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["paramws*"]

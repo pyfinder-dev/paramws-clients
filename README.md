@@ -46,7 +46,38 @@ _**References**:_
 > Cauzzi, C., Behr, Y. D., Clinton, J., Kastli, P., Elia, L., & Zollo, A., 2016. An Open-Source Earthquake Early Warning Display. Seismological Research Letters, 87(3), 737–742, doi:10.1785/0220150284
 
 ## Installation
-Coming soon
+
+> **Python Version Requirement:**  
+> This package requires **Python 3.9 or higher**.
+
+The package is not yet installable via PyPI. To install locally from source, follow these steps:
+
+1. **Clone the repository and enter the project directory:**
+   ```bash
+   git clone https://github.com/pyfinder-dev/paramws-clients.git
+   cd paramws-clients
+   ```
+
+2. **(Recommended) Create and activate a virtual environment:**
+   ```bash
+   python -m venv .venv
+   # On Unix/macOS
+   source .venv/bin/activate
+   # On Windows
+   .venv\Scripts\activate
+   ```
+
+### For Contributors / Development Installation
+If you plan to contribute or develop, install the package in **editable mode**:
+```bash
+pip install -e .
+```
+
+### For Users / Regular Local Installation
+If you just want to use the package:
+```bash
+pip install .
+```
 
 ## Usage Examples
 Coming soon
