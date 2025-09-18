@@ -67,17 +67,15 @@ The package is not yet installable via PyPI. To install locally from source, fol
    .venv\Scripts\activate
    ```
 
-### For Contributors / Development Installation
-If you plan to contribute or develop, install the package in **editable mode**:
-```bash
-pip install -e .
-```
-
-### For Users / Regular Local Installation
-If you just want to use the package:
-```bash
-pip install .
-```
+3. If you just want to use the package:
+    ```bash
+    pip install .
+    ```
+    
+    If you plan to contribute or develop, install the package in **editable mode**:
+    ```bash
+    pip install -e .
+    ```
 
 ## Usage Examples
 Coming soon
