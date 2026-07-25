@@ -6,13 +6,13 @@ import zipfile
 from paramws.clients.services.emsc.feltreport_parser import EMSCFeltReportParser
 
 
-class TestEMSCShakeMapParser(unittest.TestCase):
-    """ Test the parser for ESM ShakeMap web service. """
+class TestEMSCFeltReportParser(unittest.TestCase):
+    """Test the parser for the EMSC felt-report web service."""
     def test_EMSC_parse_testimonies(self):
         # Test if the downlinked zip file is handled properly.
         module_path = os.path.dirname(os.path.abspath(__file__))
         zip_path = os.path.join(
-            module_path, 'testdata', 'mt-export-single.zip')
+            module_path, '..', 'fixtures', 'mt-export-single.zip')
         
         with zipfile.ZipFile(zip_path) as zip:
             parser = EMSCFeltReportParser()
@@ -28,7 +28,7 @@ class TestEMSCShakeMapParser(unittest.TestCase):
         # Test if the intensities correctly parsed. 
         module_path = os.path.dirname(os.path.abspath(__file__))
         zip_path = os.path.join(
-            module_path, 'testdata', 'mt-export-single.zip')
+            module_path, '..', 'fixtures', 'mt-export-single.zip')
         
         with zipfile.ZipFile(zip_path) as zip:
             parser = EMSCFeltReportParser()

@@ -42,10 +42,11 @@ station_list = {
 }
 
 class TestESMShakeMapParser(unittest.TestCase):
-    """ Test the parser for ESM ShakeMap web service. """
+    """Test the parser for the ESM ShakeMap web service."""
     def test_ESMShakeMap_parser_format_event(self):
         # Test the parser for the ESM ShakeMap web service when format="event".
-        xml_path = os.path.join(module_path, 'testdata', 'esmws-event.xml')
+        xml_path = os.path.join(
+            module_path, '..', 'fixtures', 'esmws-event.xml')
         with open(xml_path, 'r') as xmlfile:
             data = xmlfile.read()
             parser = ESMShakeMapParser()
@@ -61,7 +62,8 @@ class TestESMShakeMapParser(unittest.TestCase):
 
     def test_ESMShakeMap_parser_format_eventdat(self):
         # Test the parser for the ESM ShakeMap web service when format="event_dat".
-        xml_path = os.path.join(module_path, 'testdata', 'esmws-eventdata.xml')
+        xml_path = os.path.join(
+            module_path, '..', 'fixtures', 'esmws-eventdata.xml')
         with open(xml_path, 'r') as xmlfile:
             data = xmlfile.read()
             parser = ESMShakeMapParser()

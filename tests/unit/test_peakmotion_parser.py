@@ -6,18 +6,18 @@ from paramws.clients.services.peakmotion_data import (
     PeakMotionStationData, PeakMotionChannelData, PeakMotionData)
 
 class TestRRSMPeakMotionParser(unittest.TestCase):
-    """ Test the parser for RRSM peak motion web service. """
+    """Test the parser for the RRSM peak-motion web service."""
     def test_json(self):
         module_path = os.path.dirname(os.path.abspath(__file__))
         json_path = os.path.join(
-            module_path, 'testdata', 'rrsm-peakmotion.json')
+            module_path, '..', 'fixtures', 'rrsm-peakmotion.json')
         
         with open(json_path, 'r') as jsonfile:
             parser = RRSMPeakMotionParser()
             parsed_data = parser.parse(jsonfile)
 
-            # data should not be None or empty. The test file
-            # contains testomines for a single earthquake.
+            # Data should not be None or empty. The fixture contains
+            # peak-motion data for a single earthquake.
             self.assertIsNotNone(parsed_data)
             self.assertIsInstance(parsed_data, PeakMotionData)
 

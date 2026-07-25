@@ -5,7 +5,9 @@ Thank you for your interest in contributing!
 ## How to contribute
 - Fork the repository and create a new branch.
 - Make your changes with clear commit messages.
-- Run tests locally (`python run_tests.py` or `pytest`).
+- Run the offline and live test suites locally:
+  `python -m unittest discover -s tests/unit -v` and
+  `python -m unittest discover -s tests/integration -v`.
 - Submit a Pull Request.
 
 ## Reporting issues

@@ -1,39 +1,17 @@
 # -*- coding: utf-8 -*-
 import unittest
+
 from paramws.clients import ESMShakeMapClient
-    
-class TestESMClient(unittest.TestCase):
-    def test_default_contructor(self):
-        # Test the constructor with default values. 
-        client = ESMShakeMapClient()
-        
-        self.assertEqual(client.get_agency(), "ESM")
-        self.assertEqual(client.get_version(), "1")
-        self.assertEqual(client.get_end_point(), "shakemap")
-        self.assertEqual(client.get_base_url(), "https://esm-db.eu/esmws/")
 
-    def test_set_url_attributes(self):
-        # Test the parts of the query url. 
-        client = ESMShakeMapClient()
-        client.set_agency("ESM")
-        client.set_version("1")
-        client.set_end_point("shakemap")
-        client.set_base_url("https://esm-db.eu/esmws")
-        self.assertEqual(client.get_agency(), "ESM")
-        self.assertEqual(client.get_version(), "1")
-        self.assertEqual(client.get_end_point(), "shakemap")
-        self.assertEqual(client.get_base_url(), "https://esm-db.eu/esmws/")
 
-    def test_query_null_event_id(self):
-        # Test the query method. 
-        client = ESMShakeMapClient()
-        self.assertRaises(ValueError, client.query, event_id=None)
+class TestESMClientLive(unittest.TestCase):
+    """Exercise the ESM client against the real provider service."""
 
     def test_query(self):
-        # Test the query method and returned data. 
+        # This historical event has event metadata and station amplitudes.
         client = ESMShakeMapClient()
         client.query(event_id="20170524_0000045")
-        self.assertIsNotNone(client.get_event_data())   
+        self.assertIsNotNone(client.get_event_data())
         self.assertIsNotNone(client.get_station_amplitudes())
 
         # Assert some values from the event data.
@@ -42,8 +20,8 @@ class TestESMClient(unittest.TestCase):
         self.assertEqual(event_data.get_catalog(), 'EMSC')
         self.assertEqual(event_data.get_network_desc(), 'ESM database')
         self.assertEqual(event_data.get_network_code(), 'ESM')
-        
-        # Check some station information
+
+        # Check some station information.
         for _sta in client.get_stations():
             # Check the components for each field.
             for _comp in _sta.get_components():
@@ -58,4 +36,3 @@ class TestESMClient(unittest.TestCase):
                 self.assertIsNotNone(_comp.get_psa03_flag())
                 self.assertIsNotNone(_comp.get_psa10_flag())
                 self.assertIsNotNone(_comp.get_psa30_flag())
-            

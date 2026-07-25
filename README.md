@@ -90,19 +90,8 @@ Coming soon
 Automated tests are executed on GitHub Actions for every push and pull request. For local development, you can also run the tests manually:
 
 ```bash
-python run_tests.py
-```
-
-Alternatively, if you prefer using `pytest`, install it first:
-
-```bash
-pip install pytest
-```
-
-Then, trigger the test modules:
-
-```bash
-PYTHONPATH=. pytest -v
+python -m unittest discover -s tests/unit -v
+python -m unittest discover -s tests/integration -v
 ```
 
 ## License

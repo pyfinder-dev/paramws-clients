@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
-"""Unit tests for the base client class."""
+"""Unit tests for the ESM ShakeMap connector."""
 import unittest
 from paramws.clients.services import InvalidOptionValue
 from paramws.clients.services import ESMShakeMapConnector
 
 class TestESMShakeMapWebService(unittest.TestCase):
-    """Unit tests for the ESM Shakemap web service client."""
+    """Unit tests for the ESM ShakeMap web service connector."""
     def test_url_build(self):
         # Test the build_url method.
         client = ESMShakeMapConnector()
@@ -70,55 +70,3 @@ class TestESMShakeMapWebService(unittest.TestCase):
         client = ESMShakeMapConnector()
         options = client.get_supported_options()
         self.assertEqual(options, ['eventid', 'catalog', 'format', 'flag', 'encoding'])
-        
-
-    def test_query_format_eventdat(self):
-        # Test the query method.
-        client = ESMShakeMapConnector()
-        client.set_agency("ESM")
-        client.set_version("1")
-        client.set_end_point("shakemap")
-        client.set_base_url("https://esm-db.eu/esmws")
-        url = client.build_url(eventid='20170524_0000045', catalog='EMSC', format='event_dat')
-        code, data = client.query(url=url)
-
-        # Check against common error codes. 
-        if code != 503:
-            # Service is avaliable, so these error should not be returned
-            # if data is not removed from the ESM server. In that case, the
-            # error code will be 404.
-            for _code in [400, 404, 500, 501, 502]:
-                self.assertNotEqual(code, _code)
-
-        # Check the data
-        self.assertIsNotNone(data)
-        
-      
-    def test_query_format_event(self):
-        # Test the query method.
-        client = ESMShakeMapConnector()
-        client.set_agency("ESM")
-        client.set_version("1")
-        client.set_end_point("shakemap")
-        client.set_base_url("https://esm-db.eu/esmws")
-        url = client.build_url(eventid='20170524_0000045', catalog='EMSC', format='event')
-        code, data = client.query(url=url)
-
-        # Check against common error codes. 
-        if code != 503:
-            # Service is avaliable, so these error should not be returned
-            # if data is not removed from the ESM server. In that case, the
-            # error code will be 404.
-            for _code in [400, 404, 500, 501, 502]:
-                self.assertNotEqual(code, _code)
-
-        # Check the data
-        self.assertIsNotNone(data)
-        
-        # Check the data content
-        self.assertEqual(data.get('id'), '20170524_0000045')
-        self.assertAlmostEqual(data.get('catalog'), 'EMSC')
-        self.assertAlmostEqual(data.get('lat'), 41.422832)
-        self.assertAlmostEqual(data.get('lon'), 20.155666)
-        self.assertAlmostEqual(data.get('depth'), 9.28)
-        self.assertAlmostEqual(data.get('mag'), 4.5)

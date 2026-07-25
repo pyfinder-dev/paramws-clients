@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
-"""Unit tests for the base client class."""
+"""Unit tests for the EMSC felt-report connector."""
 import unittest
 from paramws.clients.services import EMSCFeltReportConnector
 
 class TestEMSCFeltReportWebService(unittest.TestCase):
-    """Unit tests for the RRSM Shakemap web service client."""
+    """Unit tests for the EMSC felt-report web service connector."""
     def test_supported_options(self):
         # Test the get_supported_options method.
         client = EMSCFeltReportConnector()
