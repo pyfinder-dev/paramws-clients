@@ -1,0 +1,6 @@
+#event-one
+#thumbnails 1.0
+#Correction from Bossu et al. 2016
+#longitude,latitude,iraw,icorr
+"0","0","0","0"
+"14.4824","46.0752","1","2"

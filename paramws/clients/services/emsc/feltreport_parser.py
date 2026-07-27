@@ -1,210 +1,379 @@
-# -*- coding utf-8 -*-
+# -*- coding: utf-8 -*-
+import csv
 import io
+import json
 import os
 import zipfile
-import json
-import urllib
+
 from paramws.clients.services.baseparser import BaseParser
-from paramws.clients.services.feltreport_data import FeltReportEventData, FeltReportIntensityData
+from paramws.clients.services.feltreport_data import (
+    FeltReportEventData,
+    FeltReportIntensityData,
+)
+
 
 class EMSCFeltReportParser(BaseParser):
     """
-    Parser class for the EMSC felt report web service output. It handles two
-    different types of parsing when the testimonies are requested (intensity)
-    and when the testimonies are not requested (basic earthquake location parameters).
+    Parse the two response representations returned by EMSC felt reports.
+
+    Testimony responses are ZIP archives containing provider CSV/text files.
+    Event responses are JSON and may be either one event dictionary or a
+    non-empty list whose first event retains the service's established
+    single-event selection behavior.
     """
+
+    _MISSING_NUMERIC_VALUES = {
+        "",
+        "NaN",
+        "nan",
+        "NaT",
+        "NaT UTC",
+        "None",
+        "null",
+    }
+    _INTENSITY_HEADER = ("longitude", "latitude", "iraw", "icorr")
+
     def __init__(self):
         super().__init__()
 
-    @staticmethod
-    def _to_float(s):
-        if s is None:
+    @classmethod
+    def _to_float(cls, value, field_name, row_number):
+        """
+        Convert a provider numeric field without replacing malformed text.
+
+        EMSC's known missing-value markers remain absence. Other text is a
+        schema failure rather than a reason to silently discard a row.
+        """
+        if value is None:
             return None
-        t = s.strip()
-        if t in ("", "NaN", "nan", "NaT", "NaT UTC", "None", "null"):
+
+        text = value.strip()
+        if text in cls._MISSING_NUMERIC_VALUES:
             return None
         try:
-            return float(t)
-        except ValueError:
-            return None
+            return float(text)
+        except (TypeError, ValueError) as error:
+            raise ValueError(
+                "EMSC felt-intensity CSV row {} has malformed {} value {!r}."
+                .format(row_number, field_name, value)
+            ) from error
 
     def validate(self, data):
-        """Check the content of the data."""
-        return True
-    
-    def _validate_zip_file(self, data):
-        """
-        Check if "data" is a proper zip file content.
-        If not, open it as a zip file.
-        """
-        # Return if "data" is already a zip file
-        if isinstance(data, zipfile.ZipFile):
-            return data
-        
-        else:
-            try:
-                # Check if "data" is a zip file content
-                if zipfile.is_zipfile(data):
-                    # Yes. Return the zip file
-                    return zipfile.ZipFile(data, 'r')
-                
-                elif isinstance(data, urllib.request.http.client.HTTPResponse):
-                    # No. Open it as a zip file
-                    return zipfile.ZipFile(io.BytesIO(data.read()), 'r')
-                
-            except zipfile.BadZipFile:
-                return None
-                        
-    def _parse_intensities(self, file_in_zip, zip_archive):
-        if not file_in_zip:
-            return None
-        
-        # Read the csv file, add it to the data structure
-        # as the file name being the field name.
-        with zip_archive.open(file_in_zip) as _csv_file:
-            # Read the file content
-            _csv_content = _csv_file.read()
-            
-            # Make sure file is not empty
-            if not _csv_content:
-                return None
-            
-            # Convert the content to a string                        
-            try:
-                _csv_content = _csv_content.decode("utf-8")
-            except UnicodeDecodeError:
-                _csv_content = _csv_content.decode("latin-1")
-            
-            # Split the content into lines
-            _csv_lines = _csv_content.splitlines()
-            
-            # The first four lines are comments, where the first
-            # line is the event ID. These will be stored as "comments".
-            # The rest of the file is actual intensity data.
-            _comments = _csv_lines[0:4]
-            _csv_lines = _csv_lines[4:]
-            
-            # The first line: event ID
-            _event_id = _comments[0].replace('#', '')
-            
-            # Store the rest in a string appended one after another
-            # Leave the sharp sign in the beginning of each line.
-            _comment_string = ""
-            for _comment in _comments[1:]:
-                _comment_string += _comment + ' '
+        """Return whether parser input exists; detailed checks happen locally."""
+        return data is not None
 
-            # The rest of the lines are the data. Split them into fields.
-            _csv_lines = [_line.split(',') for _line in _csv_lines]
-            
-            # The first two fields are longitude and latitude.
-            # The third field is the raw intensity, and the fourth
-            # field is the corrected intensity.
-            _intensities = []
-            for _line in _csv_lines:
-                # Skip empty lines
-                if not _line or (len(_line) == 1 and not _line[0].strip()):
-                    continue
-                parts = [p.strip() for p in _line]
-                if len(parts) < 4:
-                    continue
-                lon = self._to_float(parts[0])
-                lat = self._to_float(parts[1])
-                raw = self._to_float(parts[2])
-                corr = self._to_float(parts[3])
-                if lon is None or lat is None:
-                    continue
-                _intensities.append({"lon": lon, "lat": lat, "raw": raw, "corrected": corr})
-            
-            return {_event_id: {'unid': _event_id,
-                                'intensities': _intensities, 
-                                'comments': _comment_string}}
+    @staticmethod
+    def _zip_error(detail):
+        return ValueError(
+            "EMSC felt-intensity ZIP content is invalid: {}.".format(detail)
+        )
+
+    def _open_zip_file(self, data):
+        """
+        Return ``(archive, opened_here)`` for established ZIP input forms.
+
+        Existing ``ZipFile`` instances remain caller-owned. ZIP wrappers
+        created for paths, bytes, or file-like response bodies are closed by
+        parse_testimonies(), while the supplied file-like object itself is
+        never closed.
+        """
+        if isinstance(data, zipfile.ZipFile):
+            return data, False
+
+        try:
+            if isinstance(data, (bytes, bytearray, memoryview)):
+                archive = zipfile.ZipFile(io.BytesIO(bytes(data)), "r")
+            elif isinstance(data, (str, os.PathLike)):
+                archive = zipfile.ZipFile(data, "r")
+            elif hasattr(data, "read"):
+                seekable = False
+                if hasattr(data, "seekable"):
+                    try:
+                        seekable = data.seekable()
+                    except (OSError, ValueError):
+                        seekable = False
+
+                if seekable:
+                    archive = zipfile.ZipFile(data, "r")
+                else:
+                    payload = data.read()
+                    if not isinstance(
+                            payload, (bytes, bytearray, memoryview)):
+                        raise self._zip_error(
+                            "the response body is not binary")
+                    archive = zipfile.ZipFile(
+                        io.BytesIO(bytes(payload)), "r")
+            else:
+                raise self._zip_error(
+                    "the supplied value is not a ZIP archive or binary input")
+        except ValueError as error:
+            if str(error).startswith("EMSC felt-intensity ZIP content"):
+                raise
+            raise self._zip_error(str(error)) from error
+        except (OSError, TypeError, zipfile.BadZipFile,
+                zipfile.LargeZipFile) as error:
+            raise self._zip_error(str(error)) from error
+
+        return archive, True
+
+    @staticmethod
+    def _decode_intensity_content(content, filename):
+        if not content:
+            raise ValueError(
+                "EMSC felt-intensity file {!r} is empty.".format(filename)
+            )
+
+        try:
+            text = content.decode("utf-8")
+        except UnicodeDecodeError:
+            text = content.decode("latin-1")
+        if not text.strip():
+            raise ValueError(
+                "EMSC felt-intensity file {!r} is empty.".format(filename)
+            )
+        return text
+
+    def _parse_intensities(self, file_in_zip, zip_archive):
+        """
+        Parse one provider intensity file with the standard CSV reader.
+
+        The first line identifies the event, the next two are provider
+        comments, and the fourth declares the four scientific columns.
+        """
+        try:
+            with zip_archive.open(file_in_zip) as csv_file:
+                csv_content = csv_file.read()
+        except (OSError, RuntimeError, ValueError,
+                zipfile.BadZipFile) as error:
+            raise self._zip_error(
+                "could not read {!r}: {}".format(file_in_zip, error)
+            ) from error
+
+        text = self._decode_intensity_content(
+            csv_content, file_in_zip)
+        try:
+            rows = list(csv.reader(io.StringIO(text), strict=True))
+        except csv.Error as error:
+            raise ValueError(
+                "EMSC felt-intensity CSV {!r} is malformed: {}."
+                .format(file_in_zip, error)
+            ) from error
+
+        if len(rows) < 4:
+            raise ValueError(
+                "EMSC felt-intensity CSV {!r} is missing its required "
+                "event, comment, or header structure.".format(file_in_zip)
+            )
+
+        event_row = rows[0]
+        if len(event_row) != 1 or not event_row[0].strip().startswith("#"):
+            raise ValueError(
+                "EMSC felt-intensity CSV {!r} is missing its event "
+                "identifier.".format(file_in_zip)
+            )
+        event_id = event_row[0].strip()[1:].strip()
+        if not event_id:
+            raise ValueError(
+                "EMSC felt-intensity CSV {!r} is missing its event "
+                "identifier.".format(file_in_zip)
+            )
+
+        # Both provider comment rows must retain the established comment
+        # shape. Their text is intentionally not interpreted scientifically.
+        for row_number, comment_row in enumerate(rows[1:3], start=2):
+            if (not comment_row
+                    or not comment_row[0].strip().startswith("#")):
+                raise ValueError(
+                    "EMSC felt-intensity CSV {!r} has malformed required "
+                    "comment row {}.".format(file_in_zip, row_number)
+                )
+
+        header = [field.strip().lower() for field in rows[3]]
+        if header:
+            header[0] = header[0].lstrip("#").strip()
+        if tuple(header) != self._INTENSITY_HEADER:
+            raise ValueError(
+                "EMSC felt-intensity CSV {!r} requires columns "
+                "longitude, latitude, iraw, and icorr."
+                .format(file_in_zip)
+            )
+
+        intensities = []
+        for row_number, row in enumerate(rows[4:], start=5):
+            if not row or all(not value.strip() for value in row):
+                continue
+            if len(row) != 4:
+                raise ValueError(
+                    "EMSC felt-intensity CSV {!r} row {} must contain "
+                    "exactly four columns.".format(file_in_zip, row_number)
+                )
+
+            longitude = self._to_float(
+                row[0], "longitude", row_number)
+            latitude = self._to_float(
+                row[1], "latitude", row_number)
+            raw_intensity = self._to_float(
+                row[2], "raw intensity", row_number)
+            corrected_intensity = self._to_float(
+                row[3], "corrected intensity", row_number)
+
+            # A row without a location cannot represent a usable intensity
+            # point. Known provider missing markers are not malformed input,
+            # but an archive containing only such rows is rejected below.
+            if longitude is None or latitude is None:
+                continue
+            intensities.append({
+                "lon": longitude,
+                "lat": latitude,
+                "raw": raw_intensity,
+                "corrected": corrected_intensity,
+            })
+
+        if not intensities:
+            raise ValueError(
+                "EMSC felt-intensity CSV {!r} contains no usable data rows."
+                .format(file_in_zip)
+            )
+
+        source_lines = text.splitlines()
+        comment_string = " ".join(source_lines[1:4]) + " "
+        return {
+            event_id: {
+                "unid": event_id,
+                "intensities": intensities,
+                "comments": comment_string,
+            },
+        }
 
     def parse_testimonies(self, data)->FeltReportIntensityData:
         """
-        "data" is a zip file containing the intensity data in comma-seperated
-        txt format. There might be more than one files, with file names 
-        being the unids of the queried events. The files have a header 
-        block with comment lines, then includes four columns for longitude, 
-        latitude, raw intensity and corrected intensity. e.g.:
-            #20201230_0000049
-            #thumbnails 1.0
-            #Correction from Bossu et al. 2016
-            #longitude,latitude,iraw,icorr
-            4.4824,46.0752,1,1
-            15.6218,45.7535,1,1
-            16.2674,46.2556,1,1
-            14.492,46.187,1,1
-        Open the zip file, and parse the csv file.
+        Parse an EMSC ZIP containing one or more intensity CSV/text files.
+
+        Unrelated archive members are ignored. At least one usable ``.txt`` or
+        ``.csv`` member is required because those are the provider's
+        established intensity representations.
         """
-        # Check the zip file. If needed, open it.
-        zip_file = self._validate_zip_file(data)
-        
-        if zip_file is None:
-            # Failed. Something is wrong with the data.
-            return None
-            
-        else:
-            # Create the data structure to store the intensity data
+        zip_file, opened_here = self._open_zip_file(data)
+        try:
+            try:
+                members = [
+                    member
+                    for member in zip_file.infolist()
+                    if not member.is_dir()
+                ]
+            except (OSError, RuntimeError, zipfile.BadZipFile) as error:
+                raise self._zip_error(str(error)) from error
+
+            if not members:
+                raise self._zip_error("the archive is empty")
+
+            intensity_members = [
+                member
+                for member in members
+                if os.path.splitext(member.filename)[1].lower()
+                in {".csv", ".txt"}
+            ]
+            if not intensity_members:
+                raise self._zip_error(
+                    "the archive has no CSV/text intensity content")
+
             intensities = FeltReportIntensityData()
-
-            # The zip file contains text files for intensities.
-            # In case there are more than files included, loop
-            # through them. Normally, there should be only one file
-            # because the web service is queried for a single event.
-            _files = zip_file.namelist()
-
-            for _file in _files:
-                # Read the csv file, add it to the data structure
-                # as the file name being the field name.
-                _intensity_data = self._parse_intensities(
-                    file_in_zip=_file, zip_archive=zip_file)
-                
-                # Add the intensity data to the data structure.
-                # Each intensity data is a dictionary with a single key
-                # (the event ID) and a dictionary as the value.
-                # The dictionary contains the again event ID, the comments,
-                # and the intensity data.
-                # e.g.:
-                # {_event_id: 
-                #    {'unid': _event_id,
-                #     'intensities': intensity info, 4 columns (lon, lat, raw, corrected)
-                #     'comments': _comment_string
-                #    }
-                # }
-                intensities.add_field(
-                    list(_intensity_data.keys())[0], 
-                    list(_intensity_data.values())[0])
-            
+            for member in intensity_members:
+                intensity_data = self._parse_intensities(
+                    file_in_zip=member,
+                    zip_archive=zip_file,
+                )
+                event_id, event_data = next(iter(intensity_data.items()))
+                if event_id in intensities.keys():
+                    raise ValueError(
+                        "EMSC felt-intensity ZIP contains duplicate event "
+                        "identifier {!r}.".format(event_id)
+                    )
+                intensities.add_field(event_id, event_data)
             return intensities
-            
+        finally:
+            if opened_here:
+                zip_file.close()
+
+    @staticmethod
+    def _read_event_content(data):
+        if isinstance(data, str):
+            return data
+        if isinstance(data, (bytes, bytearray, memoryview)):
+            raw_content = bytes(data)
+        elif hasattr(data, "read"):
+            raw_content = data.read()
+            if isinstance(raw_content, str):
+                return raw_content
+        else:
+            raise ValueError(
+                "EMSC felt-report event JSON input is not text or bytes."
+            )
+
+        if not isinstance(raw_content, bytes):
+            raise ValueError(
+                "EMSC felt-report event JSON input is not text or bytes."
+            )
+        try:
+            return raw_content.decode("utf-8")
+        except UnicodeDecodeError:
+            return raw_content.decode("latin-1")
+
     def parse(self, data)->FeltReportEventData:
         """
-        Parse the data returned by the EMSC felt report web service.
-        with tetimonies (intensity). The data is in csv format.
+        Parse EMSC event JSON while retaining its established event model.
         """
-        if data and self.validate(data):
-            # Store the original content for possible future use
-            self.set_original_content(content=data)
+        if not self.validate(data):
+            raise ValueError("EMSC felt-report event JSON is empty.")
 
-            # Read and decode the HTTPResponse body; tolerate non-UTF-8 payloads
-            _raw = data.read()
-            try:
-                _text = _raw.decode('utf-8')
-            except UnicodeDecodeError:
-                _text = _raw.decode('latin-1')
+        self.set_original_content(content=data)
+        text = self._read_event_content(data)
+        if not text.strip():
+            raise ValueError("EMSC felt-report event JSON is empty.")
 
-            # EMSC sometimes returns a list with a single dict, and sometimes a dict
-            parsed = json.loads(_text)
-            if isinstance(parsed, list):
-                if not parsed:
-                    return None
-                parsed = parsed[0]
-            elif not isinstance(parsed, dict):
-                # Unexpected shape
-                return None
+        try:
+            parsed = json.loads(text)
+        except (TypeError, json.JSONDecodeError) as error:
+            raise ValueError(
+                "EMSC felt-report event JSON is malformed: {}."
+                .format(error)
+            ) from error
 
-            # Now create the data structure
-            return FeltReportEventData(data_dict=parsed)
-        
-        # Failed. Something is wrong with the data.
-        return None
+        if isinstance(parsed, list):
+            if not parsed:
+                raise ValueError("EMSC felt-report event JSON is empty.")
+            parsed = parsed[0]
+        elif not isinstance(parsed, dict):
+            raise ValueError(
+                "EMSC felt-report event JSON has an incompatible top-level "
+                "shape; expected a dictionary or non-empty list."
+            )
+
+        if not isinstance(parsed, dict):
+            raise ValueError(
+                "EMSC felt-report event JSON list must contain event "
+                "dictionaries."
+            )
+        if not parsed:
+            raise ValueError("EMSC felt-report event JSON is empty.")
+
+        event_data = FeltReportEventData(data_dict=parsed)
+        event_identifiers = (
+            event_data.get_event_id(),
+            event_data.get_event_unid(),
+            event_data.get_event_evid(),
+        )
+        has_event_identifier = any(
+            identifier is not None
+            and not (
+                isinstance(identifier, str)
+                and not identifier.strip()
+            )
+            for identifier in event_identifiers
+        )
+        if not has_event_identifier:
+            raise ValueError(
+                "EMSC felt-report event JSON is missing its event "
+                "identifier."
+            )
+        return event_data

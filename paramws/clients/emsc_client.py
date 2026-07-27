@@ -2,6 +2,7 @@
 from paramws.clients.base_client import BaseClient, MissingRequiredOption
 from paramws.clients.services import EMSCFeltReportConnector
 from paramws.clients.services.feltreport_data import FeltReportIntensityData
+from paramws.utils.customlogger import logger
 
 class EMSCFeltReportClient(BaseClient):
     """
@@ -42,12 +43,16 @@ class EMSCFeltReportClient(BaseClient):
         self.event_data_options['unids'] = "[" + event_id + "]"
 
     def get_event_id(self):
-        """ 
-        Return the event id but strip the brackets that were added
-        for the web service compatibiity. 
         """
-        return self.felt_report_options['unids'].replace(
-            '[', '').replace(']', '')
+        Return the current event id without the provider-required brackets.
+
+        Query state is reset before required options are checked, so no event
+        identifier is a valid state after a failed query.
+        """
+        event_id = self.felt_report_options.get('unids')
+        if event_id is None:
+            return None
+        return event_id.replace('[', '').replace(']', '')
 
     def set_feltreports(self, feltreports):
         """ Set the felt intensities for the current event. """
@@ -72,32 +77,126 @@ class EMSCFeltReportClient(BaseClient):
         if feltreports is None:
             return None
 
-        # This is actually a dict that we already wrapped around.
-        # Create a new FeltReportItensityData object and return it
-        # so that we can continue to use the same interface.
-        feltreport_dict = feltreports[self.get_event_id()]
+        # The parser keeps all event entries in one established intensity
+        # model. This semantic getter continues to expose only the current
+        # event's view, also accepting the former raw-dictionary input to
+        # preserve the meaningful behavior of set_feltreports().
+        if isinstance(feltreports, FeltReportIntensityData):
+            feltreport_data = feltreports.get_data()
+        else:
+            feltreport_data = feltreports
+
+        event_id = self.get_event_id()
+        if event_id is None or event_id not in feltreport_data:
+            return None
+        feltreport_dict = feltreport_data[event_id]
         
         return FeltReportIntensityData(feltreport_dict)
     
     def query(self, event_id=None, **other_options):
         """ Query the web service for earthquake information. """
-        # Check and set options that are free to modify.
-        # The check below adds the event_id into the options
-        # for both back ends.
-        if event_id is not None:
-            self.set_event_id(event_id)
-        else:
+        # Results, connector response data, event identifiers, and query
+        # options describe only this call. Reset all of them before checking
+        # the required identifier so a failed query cannot expose old state.
+        self._reset_query_state(("felt_intensities",))
+        self.felt_report_options.clear()
+        self.felt_report_options.update({'includeTestimonies': 'true'})
+        self.event_data_options.clear()
+        self.event_data_options.update({'includeTestimonies': 'false'})
+
+        if event_id is None:
             raise MissingRequiredOption(
                 "Missing required option: event_id")
 
-        # Query the web service for the felt reports.
-        _url = self.ws_client.build_url(**self.felt_report_options)
-        _code, _feltreport_data = self.ws_client.query(url=_url)
-        self.set_feltreports(_feltreport_data)
+        self.set_event_id(event_id)
+        felt_report_options = dict(self.felt_report_options)
+        event_data_options = dict(self.event_data_options)
 
-        # Query the web service for the event parameters.
-        _url = self.ws_client.build_url(**self.event_data_options)
-        _code, _event_data = self.ws_client.query(url=_url)
-        self.set_event_data(_event_data)
+        # These native options determine both the requested event and which
+        # response parser the connector uses. The explicit event_id and the
+        # two fixed testimony selections must remain authoritative.
+        query_options = dict(other_options)
+        fixed_include_names = (
+            'includeTestimonies',
+            'includetestimonies',
+            'IncludeTestimonies',
+            'Includetestimonies',
+        )
+        if 'unids' in query_options:
+            logger.warning(
+                "%s %s ignored caller override of fixed option %r with "
+                "value %r; explicit event_id %r remains in effect.",
+                self.get_agency(),
+                self.get_end_point(),
+                'unids',
+                query_options.pop('unids'),
+                event_id,
+            )
+        for option in fixed_include_names:
+            if option not in query_options:
+                continue
+            logger.warning(
+                "%s %s ignored caller override of fixed option %r with "
+                "value %r; felt intensities keep includeTestimonies='true' "
+                "and event data keeps includeTestimonies='false'.",
+                self.get_agency(),
+                self.get_end_point(),
+                option,
+                query_options.pop(option),
+            )
 
-        return _code, _event_data, _feltreport_data
+        # No remaining EMSC option is caller-controlled for this two-response
+        # operation. Still validate every supplied name so unsupported input
+        # receives the connector's provider-specific warning.
+        self.ws_client.validate_options(**query_options)
+
+        overall_code = 200
+        felt_parse_error = None
+
+        # Felt intensities are first in the defined logical request order.
+        felt_url = self.ws_client.build_url(**felt_report_options)
+        try:
+            felt_code, feltreport_data = self.ws_client.query(url=felt_url)
+        except ValueError as error:
+            # Event data is independent. Retain this first parse failure while
+            # still attempting to populate the useful event result.
+            felt_parse_error = error
+        else:
+            if felt_code is not None and 200 <= felt_code < 300:
+                self.set_feltreports(feltreport_data)
+            else:
+                overall_code = felt_code
+                logger.error(
+                    "provider='EMSC' url=%s status=%r "
+                    "dataset=felt_intensities outcome=failed",
+                    felt_url,
+                    felt_code,
+                )
+
+        # Event data is the second independent response and remains separate
+        # from the felt-intensity dataset.
+        event_url = self.ws_client.build_url(**event_data_options)
+        try:
+            event_code, event_data = self.ws_client.query(url=event_url)
+        except ValueError:
+            # If both successful responses are invalid, the intensity failure
+            # occurred first and is therefore the one the caller receives.
+            if felt_parse_error is not None:
+                raise felt_parse_error
+            raise
+        if event_code is not None and 200 <= event_code < 300:
+            self.set_event_data(event_data)
+        else:
+            if overall_code == 200:
+                overall_code = event_code
+            logger.error(
+                "provider='EMSC' url=%s status=%r dataset=event "
+                "outcome=failed",
+                event_url,
+                event_code,
+            )
+
+        if felt_parse_error is not None:
+            raise felt_parse_error
+
+        return overall_code, self.event_data, self.datasets
