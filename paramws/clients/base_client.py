@@ -1,7 +1,6 @@
 # -*-coding: utf-8 -*-
 from abc import ABC, abstractmethod
 from paramws.clients.services import BaseWebServiceConnector
-from paramws.clients.services.basedatastructure import BaseDataStructure
 
 class MissingRequiredOption(ValueError):
     """ 
@@ -17,15 +16,35 @@ class BaseClient(ABC):
     defined in the clients/services directory.
     """
     def __init__(self):
-        # The actual client for the ESM shakemap web service.
+        # Concrete clients replace these values with their provider defaults.
+        # Keeping configuration on the client prevents connector recreation
+        # from silently restoring stale constructor values.
+        self.agency = None
+        self.base_url = None
+        self.end_point = None
+        self.version = None
+
+        # The active connector, when the concrete client has created one.
         self.ws_client:BaseWebServiceConnector = None
 
-        # Event parameters from the shakemap format=event option.
-        self.event_data: BaseDataStructure = None
+        # Results describe only the current event-scoped query.
+        self.event_data = None
+        self.datasets = {}
 
-        # Amplitudes from the shakemap format=event_dat option,
-        # or intensities from EMSC felt reports.
-        self.amplitude_data: BaseDataStructure = None
+    def _reset_query_state(self, requested_dataset_keys):
+        """
+        Prepare fresh result state for one event-scoped query.
+
+        Requested keys are initialized before transport so caller intent
+        remains visible even when a requested dataset cannot be populated.
+        """
+        self.event_data = None
+        self.datasets = {
+            dataset_key: None
+            for dataset_key in requested_dataset_keys
+        }
+        if self.ws_client is not None:
+            self.ws_client.set_data(None)
 
     @abstractmethod
     def create_web_service(self):
@@ -42,37 +61,33 @@ class BaseClient(ABC):
 
     def set_agency(self, agency):
         """ Set the agency for the web service. """
-        self.ws_client.set_agency(agency)
+        self.agency = agency
+        if self.ws_client is not None:
+            self.ws_client.set_agency(agency)
 
     def set_version(self, version):
         """ Set the version for the web service. """
-        self.ws_client.set_version(version)
+        self.version = version
+        if self.ws_client is not None:
+            self.ws_client.set_version(version)
 
     def set_end_point(self, end_point):
         """ Set the service end point for the web service. """
-        self.ws_client.set_end_point(end_point) 
+        self.end_point = end_point
+        if self.ws_client is not None:
+            self.ws_client.set_end_point(end_point)
 
     def set_base_url(self, base_url):
         """ Set the base url for the web service. """
-        self.ws_client.set_base_url(base_url)   
+        if base_url and not base_url.endswith("/"):
+            base_url += "/"
+        self.base_url = base_url
+        if self.ws_client is not None:
+            self.ws_client.set_base_url(base_url)
 
     def set_event_data(self, event_data):
         """ Set the event information. """
         self.event_data = event_data
-
-    def set_station_amplitudes(self, amplitude_data):
-        """ 
-        Set the amplitudes or intensities. Same as set_feltreports(), but included 
-        for clarity. Both use the same attribute for storing the data.
-        """
-        self.amplitude_data = amplitude_data
-
-    def set_feltreports(self, amplitude_data):
-        """ 
-        Set the amplitudes or intensities. Same as set_station_amplitudes(), but included 
-        for clarity. Both use the same attribute for storing the data.
-        """
-        self.amplitude_data = amplitude_data
 
     def get_web_service(self):
         """ Get the web service client. """
@@ -84,32 +99,24 @@ class BaseClient(ABC):
     
     def get_agency(self):
         """ Get the agency for the web service. """
-        return self.ws_client.get_agency()
+        return self.agency
     
     def get_version(self):
         """ Get the version for the web service. """
-        return self.ws_client.get_version()
+        return self.version
     
     def get_end_point(self):
         """ Get the end point for the web service. """
-        return self.ws_client.get_end_point()
+        return self.end_point
     
     def get_base_url(self):
         """ Get the base url for the web service. """
-        return self.ws_client.get_base_url()
+        return self.base_url
         
     def get_event_data(self):
         """ Return the event information. """
         return self.event_data
-    
-    def get_station_amplitudes(self):
-        """ Return the amplitudes or intensities. """
-        return self.amplitude_data    
 
-    def get_feltreports(self):
-        """ 
-        Return the amplitudes or intensities. Same as 
-        get_amplitudes(), but included for clarity.
-        """
-        return self.amplitude_data        
-    
+    def get_datasets(self):
+        """ Return the datasets for the current query. """
+        return self.datasets

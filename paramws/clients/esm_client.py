@@ -46,13 +46,21 @@ class ESMShakeMapClient(BaseClient):
     def get_event_id(self):
         """ Return the event id. """
         return self.event_options['eventid']
+
+    def set_station_amplitudes(self, station_amplitudes):
+        """ Set the station amplitudes for the current event. """
+        self.datasets["station_amplitudes"] = station_amplitudes
+
+    def get_station_amplitudes(self):
+        """ Return the station amplitudes for the current event. """
+        return self.datasets.get("station_amplitudes")
     
     def get_station_codes(self):
         """ Return the station codes. """
-        return self.amplitude_data.get_station_codes()
+        return self.get_station_amplitudes().get_station_codes()
     
     def get_stations(self):
-        return self.amplitude_data.get_stations()
+        return self.get_station_amplitudes().get_stations()
     
     def get_supported_catalogs(self):
         """ Return the list of supported catalogs. """
@@ -128,4 +136,3 @@ class ESMShakeMapClient(BaseClient):
 
         # Return the code and data from the last query.
         return _code, _event_data, _amplitude_data
-    

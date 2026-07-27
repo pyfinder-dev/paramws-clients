@@ -48,6 +48,10 @@ class EMSCFeltReportClient(BaseClient):
         """
         return self.felt_report_options['unids'].replace(
             '[', '').replace(']', '')
+
+    def set_feltreports(self, feltreports):
+        """ Set the felt intensities for the current event. """
+        self.datasets["felt_intensities"] = feltreports
     
     def create_web_service(self)->EMSCFeltReportConnector:
         """ Creates a new EMSC felt report web service client. """
@@ -64,11 +68,14 @@ class EMSCFeltReportClient(BaseClient):
         """ Return the felt reports. Felts reports are designed to have
         more than one event. The event id is the key for the dictionary 
         for this event."""
+        feltreports = self.datasets.get("felt_intensities")
+        if feltreports is None:
+            return None
+
         # This is actually a dict that we already wrapped around.
         # Create a new FeltReportItensityData object and return it
         # so that we can continue to use the same interface.
-        feltreport_dict = \
-            super().get_feltreports()[self.get_event_id()]
+        feltreport_dict = feltreports[self.get_event_id()]
         
         return FeltReportIntensityData(feltreport_dict)
     
@@ -94,4 +101,3 @@ class EMSCFeltReportClient(BaseClient):
         self.set_event_data(_event_data)
 
         return _code, _event_data, _feltreport_data
-    

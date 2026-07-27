@@ -45,12 +45,20 @@ class RRSMPeakMotionClient(BaseClient):
         """ Return the event id. """
         return self.amplitude_options['eventid']
 
+    def set_station_amplitudes(self, peak_motion):
+        """ Set the peak-motion dataset for the current event. """
+        self.datasets["peak_motion"] = peak_motion
+
+    def get_station_amplitudes(self):
+        """ Return the peak-motion dataset for the current event. """
+        return self.datasets.get("peak_motion")
+
     def get_station_codes(self):
         """ Return the station codes. """
-        return self.amplitude_data.get_station_codes()
+        return self.get_station_amplitudes().get_station_codes()
 
     def get_stations(self):
-        return self.amplitude_data.get_stations()
+        return self.get_station_amplitudes().get_stations()
 
     def create_web_service(self)->RRSMPeakMotionConnector:
         """ Create the RRSM Peak Motion service connector. """
@@ -133,12 +141,20 @@ class RRSMShakeMapClient(BaseClient):
         """ Return the event id. """
         return self.amplitude_options['eventid']
 
+    def set_station_amplitudes(self, station_amplitudes):
+        """ Set the station amplitudes for the current event. """
+        self.datasets["station_amplitudes"] = station_amplitudes
+
+    def get_station_amplitudes(self):
+        """ Return the station amplitudes for the current event. """
+        return self.datasets.get("station_amplitudes")
+
     def get_station_codes(self):
         """ Return the station codes. """
-        return self.amplitude_data.get_station_codes()
+        return self.get_station_amplitudes().get_station_codes()
 
     def get_stations(self):
-        return self.amplitude_data.get_stations()
+        return self.get_station_amplitudes().get_stations()
 
     def create_web_service(self)->RRSMShakeMapConnector:
         """ Create the RRSM ShakeMap service connector. """
