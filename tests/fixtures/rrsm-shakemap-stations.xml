@@ -1,0 +1,18 @@
+<stationlist created="1785057300">
+  <station code="AAA" name="Alpha" netid="NW" source="Network One"
+   insttype="accelerometer" lat="38.700" lon="20.500">
+    <comp name="HNZ" depth="0">
+      <acc value="0.125" flag="0"/>
+      <vel value="0.045" flag="1"/>
+    </comp>
+    <comp name="HNE" depth="1.5">
+      <psa03 value="0.350" flag="0"/>
+    </comp>
+  </station>
+  <station code="BBB" name="Beta" netid="XY" source="Network Two"
+   insttype="accelerometer" lat="38.900" lon="20.800">
+    <comp name="HNN" depth="0">
+      <acc value="0.075" flag="1"/>
+    </comp>
+  </station>
+</stationlist>

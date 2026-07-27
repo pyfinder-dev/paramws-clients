@@ -3,6 +3,7 @@ import os
 import unittest
 
 from paramws.clients.services.esm.shakemap_parser import ESMShakeMapParser
+from paramws.clients.services.rrsm.shakemap_parser import RRSMShakeMapParser
 from paramws.clients.services.shakemap_data import ShakeMapComponentNode
 from paramws.clients.services.shakemap_data import ShakeMapEventData
 from paramws.clients.services.shakemap_data import ShakeMapStationAmplitudes
@@ -207,6 +208,152 @@ class TestESMShakeMapParser(unittest.TestCase):
         with self.assertRaisesRegex(
                 ValueError, "ESM.*creation timestamp.*not-a-timestamp"):
             ESMShakeMapParser().parse(xml)
+
+
+class TestRRSMShakeMapParser(unittest.TestCase):
+    """Test RRSM parsing through the shared ESM-compatible implementation."""
+
+    def test_parser_retains_required_inheritance(self):
+        self.assertTrue(issubclass(RRSMShakeMapParser, ESMShakeMapParser))
+
+    def test_event_fixture_uses_established_model_and_numeric_types(self):
+        xml_path = os.path.join(
+            module_path, '..', 'fixtures', 'rrsm-shakemap-event.xml')
+        with open(xml_path, 'r') as xmlfile:
+            event_data = RRSMShakeMapParser().parse_earthquake(xmlfile.read())
+
+        self.assertIsInstance(event_data, ShakeMapEventData)
+        self.assertEqual(event_data.get_event_id(), "rrsm-event-one")
+        self.assertAlmostEqual(event_data.get_latitude(), 38.742)
+        self.assertAlmostEqual(event_data.get_longitude(), 20.615)
+        self.assertAlmostEqual(event_data.get_depth(), 12.4)
+        self.assertAlmostEqual(event_data.get_magnitude(), 4.8)
+        self.assertEqual(event_data["year"], 2026)
+        self.assertEqual(event_data.get_network_code(), "ORFEUS")
+
+    def test_multiple_station_and_component_records_preserve_string_flags(self):
+        xml_path = os.path.join(
+            module_path, '..', 'fixtures', 'rrsm-shakemap-stations.xml')
+        with open(xml_path, 'r') as xmlfile:
+            station_data = RRSMShakeMapParser().parse(xmlfile.read())
+
+        self.assertIsInstance(station_data, ShakeMapStationAmplitudes)
+        self.assertEqual(station_data.get_station_codes(), ["AAA", "BBB"])
+        first_station = station_data.get_stations()[0]
+        self.assertIsInstance(first_station, ShakeMapStationNode)
+        self.assertEqual(first_station.get_station_id(), "NW.AAA")
+        self.assertEqual(len(first_station.get_components()), 2)
+        first_component = first_station.get_components()[0]
+        self.assertIsInstance(first_component, ShakeMapComponentNode)
+        self.assertEqual(first_component.get_component_name(), "HNZ")
+        self.assertAlmostEqual(first_component.get_acceleration(), 0.125)
+        self.assertEqual(first_component.get_acceleration_flag(), "0")
+        self.assertAlmostEqual(first_component.get_velocity(), 0.045)
+        self.assertEqual(first_component.get_velocity_flag(), "1")
+
+    def test_singleton_station_and_component_are_normalized_to_lists(self):
+        xml = """
+        <stationlist created="1785057300">
+          <station code="ONE" netid="NW">
+            <comp name="HNZ" depth="1.5">
+              <acc value="0.25" flag="1"/>
+            </comp>
+          </station>
+        </stationlist>
+        """
+
+        station_data = RRSMShakeMapParser().parse(xml)
+
+        self.assertEqual(len(station_data.get_stations()), 1)
+        station = station_data.get_stations()[0]
+        self.assertEqual(station.get_station_id(), "NW.ONE")
+        self.assertEqual(len(station.get_components()), 1)
+        component = station.get_components()[0]
+        self.assertEqual(component.get_component_name(), "HNZ")
+        self.assertEqual(component.get_component_depth(), 1.5)
+        self.assertEqual(component.get_acceleration(), 0.25)
+        self.assertEqual(component.get_acceleration_flag(), "1")
+
+    def test_missing_required_fields_use_rrsm_provider_diagnostics(self):
+        station_cases = (
+            '<station code="ONE"/>',
+            '<station netid="NW"/>',
+            '<station code="ONE" netid="NW"><comp depth="0"/></station>',
+        )
+        for station_xml in station_cases:
+            with self.subTest(station_xml=station_xml):
+                xml = (
+                    '<stationlist created="1785057300">'
+                    + station_xml
+                    + '</stationlist>'
+                )
+                with self.assertRaisesRegex(
+                        ValueError,
+                        "RRSM/ORFEUS.*station-amplitude XML"):
+                    RRSMShakeMapParser().parse(xml)
+
+        event_without_id = (
+            '<earthquake lat="1" lon="2" depth="3" mag="4" year="2026" '
+            'month="7" day="27" hour="1" minute="2" second="3"/>'
+        )
+        with self.assertRaisesRegex(
+                ValueError, "RRSM/ORFEUS.*event XML.*@id"):
+            RRSMShakeMapParser().parse_earthquake(event_without_id)
+
+    def test_malformed_numeric_values_use_rrsm_provider_diagnostics(self):
+        malformed_event = (
+            '<earthquake id="rrsm-event-one" lat="north" lon="2" depth="3" '
+            'mag="4" year="2026" month="7" day="27" hour="1" minute="2" '
+            'second="3"/>'
+        )
+        with self.assertRaisesRegex(
+                ValueError, "RRSM/ORFEUS.*event XML.*numeric.*@lat"):
+            RRSMShakeMapParser().parse_earthquake(malformed_event)
+
+        malformed_component = """
+        <stationlist created="1785057300">
+          <station code="ONE" netid="NW">
+            <comp name="HNZ"><acc value="high" flag="0"/></comp>
+          </station>
+        </stationlist>
+        """
+        with self.assertRaisesRegex(
+                ValueError,
+                "RRSM/ORFEUS.*station-amplitude XML.*numeric"):
+            RRSMShakeMapParser().parse(malformed_component)
+
+    def test_malformed_and_incompatible_xml_identify_rrsm_expected_content(self):
+        self.assertFalse(RRSMShakeMapParser().validate("<stationlist>"))
+
+        station_cases = ("<stationlist>", "<earthquake/>")
+        for xml in station_cases:
+            with self.subTest(xml=xml):
+                with self.assertRaisesRegex(
+                        ValueError,
+                        "RRSM/ORFEUS.*station-amplitude XML") as raised:
+                    RRSMShakeMapParser().parse(xml)
+                self.assertNotIn("ESM", str(raised.exception))
+
+        event_cases = ("<earthquake>", "<stationlist/>")
+        for xml in event_cases:
+            with self.subTest(xml=xml):
+                with self.assertRaisesRegex(
+                        ValueError,
+                        "RRSM/ORFEUS.*ShakeMap event XML") as raised:
+                    RRSMShakeMapParser().parse_earthquake(xml)
+                self.assertNotIn("ESM", str(raised.exception))
+
+    def test_invalid_provider_creation_timestamp_is_rejected(self):
+        xml = """
+        <stationlist created="not-a-timestamp">
+          <station code="ONE" netid="NW"/>
+        </stationlist>
+        """
+
+        with self.assertRaisesRegex(
+                ValueError,
+                "RRSM/ORFEUS.*creation timestamp.*not-a-timestamp"):
+            RRSMShakeMapParser().parse(xml)
 
 
 if __name__ == "__main__":

@@ -168,37 +168,103 @@ class RRSMShakeMapClient(BaseClient):
 
     def query(self, event_id=None, **other_options):
         """ Query the web service for earthquake information. """
-        # Both fixed requests use the caller's event ID.
-        if event_id is not None:
-            self.set_event_id(event_id)
-        else:
+        # Results, connector response data, and event identifiers belong only
+        # to the current event-scoped query. Reset them before validating the
+        # required identifier so a failed call cannot expose older data.
+        self._reset_query_state(("station_amplitudes",))
+        self.event_options['eventid'] = None
+        self.amplitude_options['eventid'] = None
+
+        if event_id is None:
             raise MissingRequiredOption(
                 "Missing required option: event_id")
+
+        self.set_event_id(event_id)
+        event_options = dict(self.event_options)
+        amplitude_options = dict(self.amplitude_options)
+
+        query_options = dict(other_options)
+        if 'eventid' in query_options:
+            logger.warning(
+                "%s %s ignored caller override of fixed option %r with "
+                "value %r; explicit event_id %r remains in effect.",
+                self.get_agency(),
+                self.get_end_point(),
+                'eventid',
+                query_options.pop('eventid'),
+                event_id,
+            )
 
         # The event and station requests own their type selections because
         # those values determine which response parser can be used. Caller
         # input cannot change type=event for the event request or add type to
         # the station request.
-        if 'type' in other_options:
+        if 'type' in query_options:
             logger.warning(
                 "%s %s ignored fixed option %r with value %r; "
                 "the event request keeps type='event' and the station "
                 "request keeps type omitted.",
-                self.agency,
-                self.end_point,
+                self.get_agency(),
+                self.get_end_point(),
                 'type',
-                other_options['type'],
+                query_options.pop('type'),
             )
 
+        # RRSM currently has no caller-controlled ShakeMap selection after
+        # removing the two authoritative native fields. Still pass every
+        # remaining name through connector validation so unsupported input is
+        # warned about and removed consistently with direct connector use.
+        self.ws_client.validate_options(**query_options)
+
+        overall_code = 200
+        event_parse_error = None
+
         # Query the web service for the event information.
-        _url = self.ws_client.build_url(**self.event_options)
-        _code, _event_data = self.ws_client.query(url=_url)
-        self.set_event_data(_event_data)
+        event_url = self.ws_client.build_url(**event_options)
+        try:
+            event_code, event_data = self.ws_client.query(url=event_url)
+        except ValueError as error:
+            # The station representation is an independent request. Preserve
+            # the event validation failure while still attempting to retain
+            # useful station data.
+            event_parse_error = error
+        else:
+            if event_code is not None and 200 <= event_code < 300:
+                self.set_event_data(event_data)
+            else:
+                overall_code = event_code
+                logger.error(
+                    "provider='ORFEUS' url=%s status=%r dataset=event "
+                    "outcome=failed",
+                    event_url,
+                    event_code,
+                )
 
-        # Query the web service for the amplitude data.
-        _url = self.ws_client.build_url(**self.amplitude_options)
-        _code, _amplitude_data = self.ws_client.query(url=_url)
-        self.set_station_amplitudes(_amplitude_data)
+        # Query the independent station-amplitude representation even when
+        # the earlier event request failed over HTTP or during parsing.
+        amplitude_url = self.ws_client.build_url(**amplitude_options)
+        try:
+            amplitude_code, amplitude_data = self.ws_client.query(
+                url=amplitude_url)
+        except ValueError:
+            # If both responses fail validation, the event failure occurred
+            # first in the client's defined logical request order.
+            if event_parse_error is not None:
+                raise event_parse_error
+            raise
+        if amplitude_code is not None and 200 <= amplitude_code < 300:
+            self.set_station_amplitudes(amplitude_data)
+        else:
+            if overall_code == 200:
+                overall_code = amplitude_code
+            logger.error(
+                "provider='ORFEUS' url=%s status=%r "
+                "dataset=station_amplitudes outcome=failed",
+                amplitude_url,
+                amplitude_code,
+            )
 
-        # Return the response code and the data.
-        return _code, _event_data, _amplitude_data
+        if event_parse_error is not None:
+            raise event_parse_error
+
+        return overall_code, self.event_data, self.datasets
