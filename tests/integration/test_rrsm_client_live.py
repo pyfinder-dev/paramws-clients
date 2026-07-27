@@ -67,7 +67,7 @@ class TestRRSMClientLive(unittest.TestCase):
         url = client.get_web_service().get_combined_url()
         self.assertEqual(
             url,
-            "http://orfeus-eu.org/odcws/rrsm/1/"
+            "https://orfeus-eu.org/odcws/rrsm/1/"
             "peak-motion?eventid=20170524_0000045")
 
         # Check everything is in place after removal of the invalid option.
