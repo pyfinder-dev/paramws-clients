@@ -129,8 +129,9 @@ class BaseDataStructure:
         try:
             return self._data[attr]
         except KeyError:
-            raise AttributeError(f"'{self.__class__.__name__}'"
-                                 " object has no attribute '{attr}'")
+            raise AttributeError(
+                f"'{self.__class__.__name__}' object has no attribute '{attr}'"
+            )
 
     def __setattr__(self, attr, value):
         """ Override the __setattr__ method to allow setting attributes"""
@@ -140,16 +141,13 @@ class BaseDataStructure:
             super().__setattr__(attr, value)
 
     def __getitem__(self, key):
-        if self._data:
-            return self._data[key]
+        return self._data[key]
 
     def __setitem__(self, key, value):
-        if self._data:
-            self._data[key] = value
+        self._data[key] = value
 
     def __delitem__(self, key):
-        if self._data:
-            del self._data[key]
+        del self._data[key]
 
     def __str__(self):
         return str(self._data)
@@ -170,4 +168,3 @@ if __name__ == "__main__":
 
     dst.set('event_lat', 38.8, add_if_not_exist=True)
     print(dst.get('event_lat'))
-    
