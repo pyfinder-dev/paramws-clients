@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import datetime
 import os
 import unittest
 
@@ -122,6 +123,34 @@ class TestESMShakeMapParser(unittest.TestCase):
         self.assertIsNone(station.get_latitude())
         self.assertIsNone(station.get_longitude())
         self.assertEqual(station.get_components(), [])
+
+    def test_optional_creation_time_and_zero_timestamp_are_preserved(self):
+        optional_creation_attributes = ("", ' created=""', ' created="   "')
+        for creation_attribute in optional_creation_attributes:
+            with self.subTest(creation_attribute=creation_attribute):
+                xml = (
+                    "<stationlist{}>"
+                    '<station code="ONE" netid="NW"/>'
+                    "</stationlist>"
+                ).format(creation_attribute)
+
+                data = ESMShakeMapParser().parse(xml)
+
+                self.assertIsNone(data.get_creation_time())
+                self.assertEqual(data.get_station_codes(), ["ONE"])
+
+        zero_timestamp_xml = (
+            '<stationlist created="0">'
+            '<station code="ONE" netid="NW"/>'
+            "</stationlist>"
+        )
+        data = ESMShakeMapParser().parse(zero_timestamp_xml)
+
+        self.assertEqual(
+            data.get_creation_time(),
+            datetime.datetime.fromtimestamp(0),
+        )
+        self.assertEqual(data.get_station_codes(), ["ONE"])
 
     def test_malformed_and_incompatible_xml_are_rejected(self):
         cases = (
@@ -273,6 +302,26 @@ class TestRRSMShakeMapParser(unittest.TestCase):
         self.assertEqual(component.get_component_depth(), 1.5)
         self.assertEqual(component.get_acceleration(), 0.25)
         self.assertEqual(component.get_acceleration_flag(), "1")
+
+    def test_blank_creation_time_preserves_rrsm_station_data(self):
+        xml = """
+        <stationlist created="" xmlns="ch.ethz.sed.shakemap.usgs.xml">
+          <station code="ONE" netid="NW">
+            <comp name="HNZ" depth="0">
+              <acc value="0.25" flag="0"/>
+            </comp>
+          </station>
+        </stationlist>
+        """
+
+        station_data = RRSMShakeMapParser().parse(xml)
+
+        self.assertIsNone(station_data.get_creation_time())
+        self.assertEqual(station_data.get_station_codes(), ["ONE"])
+        component = station_data.get_stations()[0].get_components()[0]
+        self.assertEqual(component.get_component_name(), "HNZ")
+        self.assertEqual(component.get_acceleration(), 0.25)
+        self.assertEqual(component.get_acceleration_flag(), "0")
 
     def test_missing_required_fields_use_rrsm_provider_diagnostics(self):
         station_cases = (

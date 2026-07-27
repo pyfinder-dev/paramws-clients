@@ -52,6 +52,15 @@ def zip_bytes(content=None, filename="event-one.txt"):
     return buffer.getvalue()
 
 
+def zip_member_bytes(members):
+    """Return deterministic ZIP bytes containing the selected named members."""
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, "w") as archive:
+        for filename, content in members.items():
+            archive.writestr(filename, content)
+    return buffer.getvalue()
+
+
 class TestEMSCFeltReportParser(unittest.TestCase):
     """Test strict EMSC ZIP/CSV and event JSON parsing."""
 
@@ -117,11 +126,18 @@ class TestEMSCFeltReportParser(unittest.TestCase):
             self.parser.parse_testimonies(buffer.getvalue())
 
     def test_archive_without_intensity_content_is_rejected(self):
-        content = zip_bytes("not intensity data", filename="readme.md")
-
-        with self.assertRaisesRegex(
-                ValueError, "EMSC.*no CSV/text intensity content"):
-            self.parser.parse_testimonies(content)
+        cases = (
+            zip_bytes("not intensity data", filename="readme.md"),
+            zip_bytes(
+                "event_id|longitude|latitude",
+                filename="events.csv",
+            ),
+        )
+        for content in cases:
+            with self.subTest(content=content):
+                with self.assertRaisesRegex(
+                        ValueError, "EMSC.*no CSV/text intensity content"):
+                    self.parser.parse_testimonies(content)
 
     def test_empty_intensity_file_is_rejected(self):
         for content in (b"", b" \n\t"):
@@ -184,6 +200,41 @@ class TestEMSCFeltReportParser(unittest.TestCase):
             "corrected": 2.0,
         })
 
+    def test_extended_intensity_csv_ignores_metadata_companion(self):
+        intensity_csv = "\n".join([
+            "#20161030_0000029",
+            "#thumbnails 1.0",
+            "#Correction from Bossu et al. 2016",
+            "#longitude,latitude,time,source,iraw,icorr",
+            '13.0670,43.1951,"NaT UTC","",10,12.3',
+        ])
+        archive_content = zip_member_bytes({
+            "20161030_0000029.csv": intensity_csv,
+            "events.csv": (
+                "event_id|longitude|latitude\n"
+                "20161030_0000029|13.0670|43.1951"
+            ),
+            "LICENSE.txt": "provider license text",
+            "felt-report-license.pdf": b"unrelated PDF content",
+            "notes.md": "unrelated archive member",
+        })
+
+        parsed_data = self.parser.parse_testimonies(archive_content)
+
+        self.assertEqual(
+            set(parsed_data.get_data()),
+            {"20161030_0000029"},
+        )
+        self.assertEqual(
+            parsed_data.get_data()["20161030_0000029"]["intensities"],
+            [{
+                "lon": 13.067,
+                "lat": 43.1951,
+                "raw": 10.0,
+                "corrected": 12.3,
+            }],
+        )
+
     def test_known_missing_intensity_markers_remain_absence(self):
         parsed_data = self.parser.parse_testimonies(
             zip_bytes(intensity_text(data_rows=[
@@ -224,13 +275,26 @@ class TestEMSCFeltReportParser(unittest.TestCase):
                     self.parser.parse_testimonies(
                         zip_bytes(intensity_text(data_rows=[row])))
 
-    def test_short_and_extra_csv_rows_are_rejected(self):
+    def test_structurally_inconsistent_csv_rows_are_rejected(self):
         for row in ("1,2,3", "1,2,3,4,5"):
             with self.subTest(row=row):
                 with self.assertRaisesRegex(
-                        ValueError, "EMSC.*exactly four columns"):
+                        ValueError, "EMSC.*same number of columns"):
                     self.parser.parse_testimonies(
                         zip_bytes(intensity_text(data_rows=[row])))
+
+    def test_duplicate_required_intensity_column_is_rejected(self):
+        content = intensity_text().replace(
+            "#longitude,latitude,iraw,icorr",
+            "#longitude,latitude,iraw,icorr,iraw",
+        ).replace(
+            "1,2,3,4",
+            "1,2,3,4,5",
+        )
+
+        with self.assertRaisesRegex(
+                ValueError, "EMSC.*exactly one.*iraw"):
+            self.parser.parse_testimonies(zip_bytes(content))
 
     def test_malformed_quoted_csv_row_is_rejected(self):
         content = intensity_text(data_rows=['1,2,"3,4'])

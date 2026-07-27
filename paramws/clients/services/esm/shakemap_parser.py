@@ -148,20 +148,24 @@ class ESMShakeMapParser(BaseParser):
         # The top-level data structure is a dictionary with two keys:
         # - created: The creation time of the data.
         # - stations: A list of stations.
-        if '@created' not in station_list:
-            raise self._invalid_content(
-                expected_content,
-                "The <stationlist> element requires @created.",
-            )
-        try:
-            _creation_time = datetime.datetime.fromtimestamp(
-                int(station_list['@created']))
-        except (TypeError, ValueError, OverflowError, OSError) as error:
-            raise self._invalid_content(
-                expected_content,
-                "The provider creation timestamp is invalid: {!r}."
-                .format(station_list['@created']),
-            ) from error
+        creation_value = station_list.get('@created')
+        if creation_value is None or (
+                isinstance(creation_value, str)
+                and not creation_value.strip()):
+            # RRSM currently sends an empty attribute, while other compatible
+            # responses may omit it. Creation time is optional metadata and
+            # must not discard otherwise valid station measurements.
+            _creation_time = None
+        else:
+            try:
+                _creation_time = datetime.datetime.fromtimestamp(
+                    int(creation_value))
+            except (TypeError, ValueError, OverflowError, OSError) as error:
+                raise self._invalid_content(
+                    expected_content,
+                    "The provider creation timestamp is invalid: {!r}."
+                    .format(creation_value),
+                ) from error
         
         _esm_toplevel_data = {"created": _creation_time, "stations": []}
         esm_shakemap_data = ShakeMapStationAmplitudes(_esm_toplevel_data)

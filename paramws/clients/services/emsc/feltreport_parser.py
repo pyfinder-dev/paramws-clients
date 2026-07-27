@@ -31,7 +31,12 @@ class EMSCFeltReportParser(BaseParser):
         "None",
         "null",
     }
-    _INTENSITY_HEADER = ("longitude", "latitude", "iraw", "icorr")
+    _REQUIRED_INTENSITY_COLUMNS = (
+        "longitude",
+        "latitude",
+        "iraw",
+        "icorr",
+    )
 
     def __init__(self):
         super().__init__()
@@ -191,31 +196,47 @@ class EMSCFeltReportParser(BaseParser):
         header = [field.strip().lower() for field in rows[3]]
         if header:
             header[0] = header[0].lstrip("#").strip()
-        if tuple(header) != self._INTENSITY_HEADER:
-            raise ValueError(
-                "EMSC felt-intensity CSV {!r} requires columns "
-                "longitude, latitude, iraw, and icorr."
-                .format(file_in_zip)
-            )
+
+        # Current EMSC files may place unused provider fields between the
+        # scientific values. Resolve the four values by their declared names
+        # so old four-column files and current extended files retain the same
+        # public intensity representation.
+        column_indexes = {}
+        for column_name in self._REQUIRED_INTENSITY_COLUMNS:
+            matching_indexes = [
+                index
+                for index, header_name in enumerate(header)
+                if header_name == column_name
+            ]
+            if len(matching_indexes) != 1:
+                raise ValueError(
+                    "EMSC felt-intensity CSV {!r} requires exactly one "
+                    "{!r} column.".format(file_in_zip, column_name)
+                )
+            column_indexes[column_name] = matching_indexes[0]
 
         intensities = []
         for row_number, row in enumerate(rows[4:], start=5):
             if not row or all(not value.strip() for value in row):
                 continue
-            if len(row) != 4:
+            if len(row) != len(header):
                 raise ValueError(
                     "EMSC felt-intensity CSV {!r} row {} must contain "
-                    "exactly four columns.".format(file_in_zip, row_number)
+                    "the same number of columns as its header."
+                    .format(file_in_zip, row_number)
                 )
 
             longitude = self._to_float(
-                row[0], "longitude", row_number)
+                row[column_indexes["longitude"]], "longitude", row_number)
             latitude = self._to_float(
-                row[1], "latitude", row_number)
+                row[column_indexes["latitude"]], "latitude", row_number)
             raw_intensity = self._to_float(
-                row[2], "raw intensity", row_number)
+                row[column_indexes["iraw"]], "raw intensity", row_number)
             corrected_intensity = self._to_float(
-                row[3], "corrected intensity", row_number)
+                row[column_indexes["icorr"]],
+                "corrected intensity",
+                row_number,
+            )
 
             # A row without a location cannot represent a usable intensity
             # point. Known provider missing markers are not malformed input,
@@ -267,12 +288,19 @@ class EMSCFeltReportParser(BaseParser):
             if not members:
                 raise self._zip_error("the archive is empty")
 
-            intensity_members = [
-                member
-                for member in members
-                if os.path.splitext(member.filename)[1].lower()
-                in {".csv", ".txt"}
-            ]
+            intensity_members = []
+            for member in members:
+                extension = os.path.splitext(member.filename)[1].lower()
+                basename = os.path.basename(member.filename).lower()
+                if extension not in {".csv", ".txt"}:
+                    continue
+
+                # The current provider archive places event summaries and
+                # licensing beside event-intensity files. They are archive
+                # metadata, not malformed intensity datasets.
+                if basename == "events.csv" or basename.startswith("license"):
+                    continue
+                intensity_members.append(member)
             if not intensity_members:
                 raise self._zip_error(
                     "the archive has no CSV/text intensity content")
