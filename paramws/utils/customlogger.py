@@ -58,7 +58,7 @@ def _ok(self, message, *args, **kwargs):
         # This wrapper adds one frame. Incrementing a supplied stacklevel also
         # preserves callers that deliberately report on behalf of their caller.
         kwargs["stacklevel"] = kwargs.get("stacklevel", 1) + 1
-        self._log(OK_LOG_LEVEL, message, args, **kwargs)
+        self.log(OK_LOG_LEVEL, message, *args, **kwargs)
 
 
 def _remove_owned_handlers():
