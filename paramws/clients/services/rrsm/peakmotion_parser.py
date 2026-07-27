@@ -8,12 +8,45 @@ from paramws.clients.services.peakmotion_data import (
 class RRSMPeakMotionParser(BaseParser):
     """ Parses the peak motion data from RRSM. The peak motion
     data includes event information as well as the PGA and PGV """
+    EVENT_KEYS = (
+        "event-id", "event-time", "event-magnitude", "magnitude-type",
+        "event-depth", "event-latitude", "event-longitude", "review-type",
+        "event-location-reference", "event-magnitude-reference",
+    )
+    STATION_KEYS = (
+        "network-code", "station-code", "location-code",
+        "station-latitude", "station-longitude", "station-elevation",
+        "epicentral-distance", "review-type",
+    )
+    CHANNEL_KEYS = (
+        "channel-code", "pga-value", "pgv-value", "sensor-azimuth",
+        "sensor-dip", "sensor-depth", "low-cut-corner", "high-cut-corner",
+    )
+
     def __init__(self):
         super().__init__()
 
     def validate(self, data):
         """Check the content of the data."""
-        return True
+        return (
+            isinstance(data, (str, bytes, bytearray))
+            or (data is not None and hasattr(data, "read"))
+        )
+
+    @staticmethod
+    def _require_fields(record, required_fields, structure):
+        """Require the provider fields already consumed by this parser."""
+        if not isinstance(record, dict):
+            raise ValueError(
+                "RRSM Peak Motion response is invalid: expected {} to be "
+                "an object, got {}.".format(
+                    structure, type(record).__name__))
+
+        for field in required_fields:
+            if field not in record:
+                raise ValueError(
+                    "RRSM Peak Motion response is invalid: expected {} "
+                    "field {!r}.".format(structure, field))
     
     def parse(self, data)->PeakMotionData:
         """
@@ -21,78 +54,98 @@ class RRSMPeakMotionParser(BaseParser):
         already in json format (a list of jsons). So, this parser 
         just breaks the content into logical components.
         """
-        if data and self.validate(data):
-            # Store the original content
-            self.set_original_content(content=data)
+        if not self.validate(data):
+            raise ValueError(
+                "RRSM Peak Motion response is invalid: expected readable "
+                "JSON peak-motion content.")
 
-            try:
+        # Store the original file-like response for the existing parser API.
+        self.set_original_content(content=data)
+        try:
+            if isinstance(data, (str, bytes, bytearray)):
+                json_data = json.loads(data)
+            else:
                 json_data = json.load(data)
+        except (json.JSONDecodeError, UnicodeDecodeError, TypeError,
+                AttributeError) as error:
+            raise ValueError(
+                "RRSM Peak Motion response is invalid: expected JSON "
+                "peak-motion content; malformed JSON ({}).".format(error)
+            ) from error
 
-                if isinstance(json_data, list):
-                    json_data = {'event-list': json_data}
+        if isinstance(json_data, list):
+            json_data = {'event-list': json_data}
+        elif not isinstance(json_data, dict):
+            raise ValueError(
+                "RRSM Peak Motion response is invalid: expected a top-level "
+                "list or an object containing an 'event-list' list.")
 
-            except Exception as e:
-                raise ValueError("Invalid data. The content is not " +
-                                 "a valid RRSM peak-motion json file. " + str(e))
-            
-            # Initialize the main data structure for the RRSM peak motion
-            _data_item = PeakMotionData()
+        if 'event-list' not in json_data:
+            raise ValueError(
+                "RRSM Peak Motion response is invalid: expected top-level "
+                "field 'event-list'.")
 
-            # Store the whole data at the very top level
-            _data_item.set_data(json_data)
-            
-            # Get the list of events
-            event_list = json_data.get('event-list')
+        event_list = json_data['event-list']
+        if not isinstance(event_list, list):
+            raise ValueError(
+                "RRSM Peak Motion response is invalid: expected field "
+                "'event-list' to be a list.")
+        if not event_list:
+            raise ValueError(
+                "RRSM Peak Motion response is invalid: expected a non-empty "
+                "'event-list' collection.")
 
-            # The first level of the json file contains the event and station
-            # information. Construct the event dict from the first node since
-            # it is repeated for each station.
-            _event_keys = ["event-id", "event-time", "event-magnitude", 
-                           "magnitude-type", "event-depth", "event-latitude", 
-                           "event-longitude", "review-type",
-                           "event-location-reference", "event-magnitude-reference"]
-            
-            _station_keys = ["network-code", "station-code", "location-code", 
-                             "station-latitude", "station-longitude", 
-                             "station-elevation", "epicentral-distance", 
-                             "review-type"]
-            
-            _channel_keys = ["channel-code", "pga-value", "pgv-value", 
-                             "sensor-azimuth", "sensor-dip", "sensor-depth", 
-                             "low-cut-corner", "high-cut-corner"]
-            
-            # Construct the event dict from the first node since it is repeated
-            # for each station.
-            _event_item = PeakMotionEventData()
-            for _key in _event_keys:
-                _event_item.set(_key, event_list[0][_key], 
-                                add_if_not_exist=True)
-                
-            _data_item.set_event_data(_event_item)
-            
-            # Loop through the events and construct the data dicts.
-            for event_dict in event_list:
-                _station_data = PeakMotionStationData()
-                    
-                for _key in _station_keys:
-                    # Add the key. Force adding the key in case if not exists.
-                    _station_data.set(
-                        _key, event_dict[_key], add_if_not_exist=True)
-                    
-                _data_item.add_station(_station_data)
-                    
-                # Construct the channel data dicts.
-                channel_list = event_dict['sensor-channels']
-                for channel_dict in channel_list:
-                    _channel_data = PeakMotionChannelData()
-                            
-                    for _key in _channel_keys:
-                        # Add the key. Force adding the key in case if not exists.
-                        _channel_data.set(
-                            _key, channel_dict[_key], add_if_not_exist=True)
-                        
-                    _station_data.add_channel(_channel_data)
-            
-            # Return the main data structure
-            return _data_item
-        
+        # Validate every provider record before constructing models. Event
+        # values repeat for each station, but all records must still contain
+        # the established fields that this provider hierarchy represents.
+        for event_index, event_dict in enumerate(event_list):
+            structure = "event/station record {}".format(event_index)
+            self._require_fields(
+                event_dict, self.EVENT_KEYS, structure)
+            self._require_fields(
+                event_dict, self.STATION_KEYS, structure)
+
+            if 'sensor-channels' not in event_dict:
+                raise ValueError(
+                    "RRSM Peak Motion response is invalid: expected {} "
+                    "field 'sensor-channels'.".format(structure))
+            channel_list = event_dict['sensor-channels']
+            if not isinstance(channel_list, list):
+                raise ValueError(
+                    "RRSM Peak Motion response is invalid: expected {} "
+                    "field 'sensor-channels' to be a list.".format(structure))
+
+            for channel_index, channel_dict in enumerate(channel_list):
+                self._require_fields(
+                    channel_dict,
+                    self.CHANNEL_KEYS,
+                    "{} sensor-channels record {}".format(
+                        structure, channel_index),
+                )
+
+        # Preserve the provider-specific combined hierarchy without numeric,
+        # unit, or cross-record normalization.
+        data_item = PeakMotionData()
+        data_item.set_data(json_data)
+
+        event_item = PeakMotionEventData()
+        for key in self.EVENT_KEYS:
+            event_item.set(
+                key, event_list[0][key], add_if_not_exist=True)
+        data_item.set_event_data(event_item)
+
+        for event_dict in event_list:
+            station_data = PeakMotionStationData()
+            for key in self.STATION_KEYS:
+                station_data.set(
+                    key, event_dict[key], add_if_not_exist=True)
+            data_item.add_station(station_data)
+
+            for channel_dict in event_dict['sensor-channels']:
+                channel_data = PeakMotionChannelData()
+                for key in self.CHANNEL_KEYS:
+                    channel_data.set(
+                        key, channel_dict[key], add_if_not_exist=True)
+                station_data.add_channel(channel_data)
+
+        return data_item

@@ -72,30 +72,57 @@ class RRSMPeakMotionClient(BaseClient):
 
     def query(self, event_id=None, **other_options):
         """ Query the web service for earthquake information. """
-        # The event ID selects the single Peak Motion response.
-        if event_id is not None:
-            self.set_event_id(event_id)
-        else:
+        # The one provider response supplies both event information and peak
+        # motion measurements. Reset both public representations, connector
+        # response data, and stored identifiers before validating this call so
+        # even a missing-event failure cannot expose an earlier result.
+        self._reset_query_state(("peak_motion",))
+        self.event_options['eventid'] = None
+        self.amplitude_options['eventid'] = None
+
+        if event_id is None:
             raise MissingRequiredOption(
                 "Missing required option: event_id")
 
-        # Query the web service for the event information. No need to
-        # query twice for amplitudes. RRSM peak motion already returns
-        # a json with the station amplitudes and event parameters.
+        self.set_event_id(event_id)
         request_options = dict(self.event_options)
-        if 'type' in other_options:
-            # Peak Motion does not support type. Passing it to the connector
-            # exposes the standard unsupported-option warning and cleaning.
-            request_options['type'] = other_options['type']
 
-        _url = self.ws_client.build_url(**request_options)
-        _code, _peakmotion_data = self.ws_client.query(url=_url)
-        self.set_event_data(_peakmotion_data)
-        self.set_station_amplitudes(_peakmotion_data)
+        query_options = dict(other_options)
+        if 'eventid' in query_options:
+            logger.warning(
+                "%s %s ignored caller override of fixed option %r with "
+                "value %r; explicit event_id %r remains in effect.",
+                self.get_agency(),
+                self.get_end_point(),
+                'eventid',
+                query_options.pop('eventid'),
+                event_id,
+            )
 
-        # Return the response code and the data.
-        # The amplitude data is the same as the event data for this client.
-        return _code, _peakmotion_data, _peakmotion_data
+        # Peak Motion supports only eventid. Pass every remaining caller name,
+        # including type, through the connector so unsupported options receive
+        # the standard provider-specific warning and cannot reach the URL.
+        query_options = self.ws_client.validate_options(**query_options)
+        request_options.update(query_options)
+
+        request_url = self.ws_client.build_url(**request_options)
+        code, peak_motion_data = self.ws_client.query(url=request_url)
+
+        if code is not None and 200 <= code < 300:
+            # The parser deliberately keeps the provider's combined
+            # measurement hierarchy while exposing its nested event model as
+            # the conceptually separate event result.
+            self.set_event_data(peak_motion_data.get_event_data())
+            self.set_station_amplitudes(peak_motion_data)
+        else:
+            logger.error(
+                "provider='ORFEUS' url=%s status=%r dataset=peak_motion "
+                "outcome=failed",
+                request_url,
+                code,
+            )
+
+        return code, self.event_data, self.datasets
 
 
 class RRSMShakeMapClient(BaseClient):
