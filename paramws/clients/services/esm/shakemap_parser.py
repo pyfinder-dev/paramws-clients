@@ -16,6 +16,119 @@ class ESMShakeMapParser(BaseParser):
     def __init__(self):
         super().__init__()
 
+    @staticmethod
+    def _invalid_content(expected_content, detail):
+        """Build the provider-specific validation error required by clients."""
+        return ValueError(
+            "ESM returned invalid successful content; expected {}. {}"
+            .format(expected_content, detail)
+        )
+
+    def _parse_xml_root(self, data, root_name, expected_content):
+        """Return one required ESM XML root as a dictionary."""
+        if not data:
+            raise self._invalid_content(
+                expected_content,
+                "The response was empty.",
+            )
+
+        try:
+            xml_content = xmltodict.parse(data)
+        except Exception as error:
+            raise self._invalid_content(
+                expected_content,
+                "The XML is malformed: {}.".format(error),
+            ) from error
+
+        root = xml_content.get(root_name)
+        if not isinstance(root, dict):
+            raise self._invalid_content(
+                expected_content,
+                "The top-level element must be <{}>.".format(root_name),
+            )
+        return root
+
+    def _required_number(self, record, key, converter, expected_content):
+        """Convert one required provider value and report its field clearly."""
+        if key not in record:
+            raise self._invalid_content(
+                expected_content,
+                "Required field {!r} is missing.".format(key),
+            )
+        try:
+            return converter(record[key])
+        except (TypeError, ValueError, OverflowError) as error:
+            raise self._invalid_content(
+                expected_content,
+                "Required numeric field {!r} has malformed value {!r}."
+                .format(key, record[key]),
+            ) from error
+
+    def _parse_component(self, component_xml, expected_content):
+        """Create one component while retaining ESM response flags verbatim."""
+        if not isinstance(component_xml, dict):
+            raise self._invalid_content(
+                expected_content,
+                "Each <comp> record must contain XML attributes.",
+            )
+
+        component_name = component_xml.get('@name')
+        if not component_name:
+            raise self._invalid_content(
+                expected_content,
+                "Each <comp> record requires a non-empty @name.",
+            )
+
+        component = {'name': component_name}
+        depth = component_xml.get('@depth')
+        if depth is None:
+            component['depth'] = 0.0
+        else:
+            try:
+                component['depth'] = float(depth)
+            except (TypeError, ValueError, OverflowError) as error:
+                raise self._invalid_content(
+                    expected_content,
+                    "Component {!r} has malformed numeric @depth {!r}."
+                    .format(component_name, depth),
+                ) from error
+
+        for key in ('acc', 'vel', 'psa03', 'psa10', 'psa30'):
+            measurement = component_xml.get(key)
+            if measurement is None:
+                component[key] = None
+                continue
+            if not isinstance(measurement, dict):
+                raise self._invalid_content(
+                    expected_content,
+                    "Component {!r} field {!r} must contain value and flag "
+                    "attributes.".format(component_name, key),
+                )
+            if '@value' not in measurement or '@flag' not in measurement:
+                raise self._invalid_content(
+                    expected_content,
+                    "Component {!r} field {!r} requires @value and @flag."
+                    .format(component_name, key),
+                )
+            try:
+                component[key] = float(measurement['@value'])
+            except (TypeError, ValueError, OverflowError) as error:
+                raise self._invalid_content(
+                    expected_content,
+                    "Component {!r} field {!r} has malformed numeric value "
+                    "{!r}.".format(
+                        component_name,
+                        key,
+                        measurement['@value'],
+                    ),
+                ) from error
+
+            # ESM defines these flags as provider response values. Their
+            # string representation is meaningful and must not be normalized.
+            component[key + 'flag'] = measurement['@flag']
+
+        return ShakeMapComponentNode(data_dict=component)
+
     def _parse_amplitudes(self, data)->ShakeMapStationAmplitudes:
         """
         Parse the data returned by the ESM ShakeMap web service.
@@ -24,25 +137,57 @@ class ESMShakeMapParser(BaseParser):
         """
         self.set_original_content(content=data)
 
-        # Convert the XML content to a dictionary. 
-        # This is easier to work with.
-        xml_content = xmltodict.parse(data)
+        expected_content = "ESM ShakeMap station-amplitude XML"
+        station_list = self._parse_xml_root(
+            data,
+            'stationlist',
+            expected_content,
+        )
 
         # Initialize the main data structure for the ESM ShakeMap.
         # The top-level data structure is a dictionary with two keys:
         # - created: The creation time of the data.
         # - stations: A list of stations.
+        if '@created' not in station_list:
+            raise self._invalid_content(
+                expected_content,
+                "The <stationlist> element requires @created.",
+            )
         try:
             _creation_time = datetime.datetime.fromtimestamp(
-                    int(xml_content['stationlist']['@created']))
-        except:
-            _creation_time = datetime.datetime.now()
+                int(station_list['@created']))
+        except (TypeError, ValueError, OverflowError, OSError) as error:
+            raise self._invalid_content(
+                expected_content,
+                "The provider creation timestamp is invalid: {!r}."
+                .format(station_list['@created']),
+            ) from error
         
         _esm_toplevel_data = {"created": _creation_time, "stations": []}
         esm_shakemap_data = ShakeMapStationAmplitudes(_esm_toplevel_data)
 
-        for _sta in xml_content['stationlist']['station']:
-             # Station ID is constructed using network and station code 
+        station_records = station_list.get('station')
+        if isinstance(station_records, dict):
+            station_records = [station_records]
+        if not isinstance(station_records, list) or not station_records:
+            raise self._invalid_content(
+                expected_content,
+                "The <stationlist> element requires at least one <station>.",
+            )
+
+        for _sta in station_records:
+            if not isinstance(_sta, dict):
+                raise self._invalid_content(
+                    expected_content,
+                    "Each <station> record must contain XML attributes.",
+                )
+            if not _sta.get('@netid') or not _sta.get('@code'):
+                raise self._invalid_content(
+                    expected_content,
+                    "Each <station> requires non-empty @netid and @code.",
+                )
+
+            # Station ID is constructed using network and station code
             # to search for the station in station list
             _id = "{}.{}".format(_sta['@netid'], _sta['@code'])
 
@@ -67,26 +212,21 @@ class ESMShakeMapParser(BaseParser):
             esm_shakemap_data.stations.append(station_node)
 
             # Each component is again a dictionary
-            keys = ['depth', 'acc', 'vel', 'psa03', 'psa10', 'psa30']            
             if 'comp' in _sta:
-                for _comp in _sta['comp']:
-                    component = {'name': _comp['@name']}
+                component_records = _sta['comp']
+                if isinstance(component_records, dict):
+                    component_records = [component_records]
+                if not isinstance(component_records, list) \
+                        or not component_records:
+                    raise self._invalid_content(
+                        expected_content,
+                        "A present <comp> collection must contain records.",
+                    )
 
-                    for key in keys:
-                        try:
-                            component[key] = float(_comp[key]['@value'])
-                            component[key + 'flag'] = int(_comp[key]['@flag'])
-                        except:
-                            if key == 'depth':
-                                component[key] = 0.0
-                            else:
-                                component[key] = None
-
-                    # Create a channel-level dictionary
-                    channel_node = ShakeMapComponentNode(data_dict=component)
-
-                    # Add the channel node to the station node
-                    station_node.components.append(channel_node)
+                for _comp in component_records:
+                    station_node.components.append(
+                        self._parse_component(_comp, expected_content)
+                    )
 
         # Pass the main data structure back to the caller
         return esm_shakemap_data
@@ -96,14 +236,16 @@ class ESMShakeMapParser(BaseParser):
         Calls the internal parsing method for format="event_dat" option
         if the data is successfully validated. 
         """
-        if data and self.validate(data):
-            return self._parse_amplitudes(data)
-        else:
-            raise ValueError("Invalid data. The content is not " +
-                             "a valid ESM Shakemap XML file.")        
+        return self._parse_amplitudes(data)
 
     def validate(self, data):
         """Check the content of the data."""
+        if not data:
+            return False
+        try:
+            xmltodict.parse(data)
+        except Exception:
+            return False
         return True
     
     def parse_earthquake(self, data)->ShakeMapEventData:
@@ -112,33 +254,40 @@ class ESMShakeMapParser(BaseParser):
         when format='event'. Called by the parse_response() method
         of the ESM ShakeMap client.
         """
-        if data and self.validate(data):
-            # Store the original content
-            self.set_original_content(content=data)
+        expected_content = "ESM ShakeMap event XML"
+        self.set_original_content(content=data)
+        eq = self._parse_xml_root(data, 'earthquake', expected_content)
 
-            # Convert the XML content to a dictionary.
-            xml_content = xmltodict.parse(data)
+        if not eq.get('@id'):
+            raise self._invalid_content(
+                expected_content,
+                "The <earthquake> record requires a non-empty @id.",
+            )
 
-            eq = xml_content['earthquake']
+        keys = ['id', 'catalog', 'lat', 'lon', 'depth', 'mag', 'year',
+                'month', 'day', 'hour', 'minute', 'second', 'timezone',
+                'time', 'locstring', 'netid', 'network', 'created']
+        float_keys = {'lat', 'lon', 'depth', 'mag', 'second'}
+        integer_keys = {'year', 'month', 'day', 'hour', 'minute'}
+        event_data = {}
 
-            # The keys in the dictionary 
-            keys = ['id', 'catalog', 'lat', 'lon', 'depth', 'mag', 'year', 
-                    'month', 'day', 'hour', 'minute', 'second', 'timezone', 
-                    'time', 'locstring', 'netid', 'network', 'created']
-            event_data = {}
+        for key in keys:
+            xml_key = '@' + key
+            if key in float_keys:
+                event_data[key] = self._required_number(
+                    eq,
+                    xml_key,
+                    float,
+                    expected_content,
+                )
+            elif key in integer_keys:
+                event_data[key] = self._required_number(
+                    eq,
+                    xml_key,
+                    int,
+                    expected_content,
+                )
+            else:
+                event_data[key] = eq.get(xml_key)
 
-            for key in keys:
-                if '@' + key in eq:
-                    if key in ['lat', 'lon', 'depth', 'mag', 'second']:
-                        event_data[key] = float(eq['@' + key])
-                    elif key in ['year', 'month', 'day', 'hour', 'minute']:
-                        event_data[key] = int(eq['@' + key])
-                    else:
-                        event_data[key] = eq['@' + key]
-                else:
-                    event_data[key] = None
-
-            # Create a ShakeMapEventData object            
-            esm_shakemap_data = ShakeMapEventData(event_data)
-
-            return esm_shakemap_data
+        return ShakeMapEventData(event_data)

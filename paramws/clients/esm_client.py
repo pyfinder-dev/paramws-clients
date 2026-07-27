@@ -1,6 +1,7 @@
 # -*-coding: utf-8 -*-
 from paramws.clients.base_client import BaseClient, MissingRequiredOption
 from paramws.clients.services import ESMShakeMapConnector
+from paramws.utils.customlogger import logger
 
 class ESMShakeMapClient(BaseClient):
     """ 
@@ -109,30 +110,105 @@ class ESMShakeMapClient(BaseClient):
     
     def query(self, event_id=None, **other_options):
         """ Query the web service for earthquake information. """
-        # Check and set options that are free to modify.
-        # Leave 'encoding' as is. 'format' is already set
-        # for different data sets.
-        if event_id is not None:
-            self.set_event_id(event_id)
-        else:
+        # Results and event identifiers belong only to the current query.
+        # Public option methods such as set_catalog() remain persistent
+        # configuration, while keyword options below are applied to local
+        # copies so one call cannot change the next call's defaults.
+        self._reset_query_state(("station_amplitudes",))
+        self.event_options['eventid'] = None
+        self.amplitude_options['eventid'] = None
+
+        if event_id is None:
             raise MissingRequiredOption(
                 "Missing required option: event_id")
-        
-        if 'catalog' in other_options:
-            self.set_catalog(other_options['catalog'])
 
-        if 'flag' in other_options:
-            self.include_problematic_data(other_options['flag'])
+        self.set_event_id(event_id)
+        event_options = dict(self.event_options)
+        amplitude_options = dict(self.amplitude_options)
+
+        query_options = dict(other_options)
+        if 'eventid' in query_options:
+            logger.warning(
+                "%s %s ignored caller override of fixed option %r with "
+                "value %r; explicit event_id %r remains in effect.",
+                self.get_agency(),
+                self.get_end_point(),
+                'eventid',
+                query_options.pop('eventid'),
+                event_id,
+            )
+        if 'format' in query_options:
+            logger.warning(
+                "%s %s ignored caller override of fixed option %r with "
+                "value %r; event format %r and station-amplitude format %r "
+                "remain in effect.",
+                self.get_agency(),
+                self.get_end_point(),
+                'format',
+                query_options.pop('format'),
+                event_options['format'],
+                amplitude_options['format'],
+            )
+
+        # The connector remains the authority for native ESM option names and
+        # values. Applying its cleaned result to local copies preserves public
+        # method configuration while preventing query keywords from leaking.
+        query_options = self.ws_client.validate_options(**query_options)
+        for option in ('catalog', 'flag', 'encoding'):
+            if option in query_options:
+                event_options[option] = query_options[option]
+                amplitude_options[option] = query_options[option]
+
+        overall_code = 200
+        event_parse_error = None
 
         # Query the web service for the event information.
-        _url = self.ws_client.build_url(**self.event_options)
-        _code, _event_data = self.ws_client.query(url=_url)
-        self.set_event_data(_event_data)
+        event_url = self.ws_client.build_url(**event_options)
+        try:
+            event_code, event_data = self.ws_client.query(url=event_url)
+        except ValueError as error:
+            # Parsing a successful event response must not make the separate
+            # station endpoint dependent on that response. Keep the original
+            # exception so it can be re-raised after the station attempt.
+            event_parse_error = error
+        else:
+            if event_code is not None and 200 <= event_code < 300:
+                self.set_event_data(event_data)
+            else:
+                overall_code = event_code
+                logger.error(
+                    "provider='ESM' url=%s status=%r dataset=event "
+                    "outcome=failed",
+                    event_url,
+                    event_code,
+                )
 
-        # Now query the web service for the amplitude data.
-        _url = self.ws_client.build_url(**self.amplitude_options)
-        _code, _amplitude_data = self.ws_client.query(url=_url)
-        self.set_station_amplitudes(_amplitude_data)
+        # Station amplitudes are independent of the event response. Attempt
+        # this request even when the provider rejected the earlier event
+        # request, retaining any station data that can still be parsed.
+        amplitude_url = self.ws_client.build_url(**amplitude_options)
+        try:
+            amplitude_code, amplitude_data = self.ws_client.query(
+                url=amplitude_url)
+        except ValueError:
+            # When both successful responses are invalid, preserve the first
+            # parse failure in the client's defined request order.
+            if event_parse_error is not None:
+                raise event_parse_error
+            raise
+        if amplitude_code is not None and 200 <= amplitude_code < 300:
+            self.set_station_amplitudes(amplitude_data)
+        else:
+            if overall_code == 200:
+                overall_code = amplitude_code
+            logger.error(
+                "provider='ESM' url=%s status=%r "
+                "dataset=station_amplitudes outcome=failed",
+                amplitude_url,
+                amplitude_code,
+            )
 
-        # Return the code and data from the last query.
-        return _code, _event_data, _amplitude_data
+        if event_parse_error is not None:
+            raise event_parse_error
+
+        return overall_code, self.event_data, self.datasets
