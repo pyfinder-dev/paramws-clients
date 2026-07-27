@@ -1,184 +1,136 @@
 # -*- coding: utf-8 -*-
+"""Configure the package-owned logger."""
 import logging
 import logging.handlers
+import os
+from types import MethodType
 
-# Colors for the different log levels
-grey = "\x1b[38;20m"
-yellow = "\x1b[33;20m"
-red = "\x1b[31;20m"
-bold_red = "\x1b[31;1m"
-magenta = "\033[95m"
-green = "\033[92m" 
-reset = "\x1b[0m"
 
-# Define a new log level (OK) that is higher than INFO
-# but lower than WARNING.
-OK_LOG_LEVEL = logging.INFO + 5 
+# This is the single intended switch between persistent and colored output.
+OUTPUT_MODE = "file"
 
-# This is not log level. I use this for the finder logs
-FINDER_LOG_LEVEL = logging.INFO + 6
+OK_LOG_LEVEL = logging.INFO + 5
+_HANDLER_MARKER = "_paramws_owned_handler"
+_DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
+_LOG_FORMAT = (
+    "%(asctime)s %(levelname)-8s %(message)s (%(filename)s:%(lineno)d)"
+)
+_RESET = "\x1b[0m"
+_LEVEL_COLORS = {
+    logging.DEBUG: "\x1b[95m",
+    logging.INFO: "\x1b[38;20m",
+    logging.WARNING: "\x1b[33;20m",
+    logging.ERROR: "\x1b[31;20m",
+    logging.CRITICAL: "\x1b[31;1m",
+    OK_LOG_LEVEL: "\x1b[92m",
+}
 
-# Define new log levels in the logging module
 logging.addLevelName(OK_LOG_LEVEL, "OK")
-logging.addLevelName(FINDER_LOG_LEVEL, "FinDer")
+logger = logging.getLogger("paramws")
 
 
-class LoggingFormatter(logging.Formatter):
-    """ Formatter for the console logging with colors."""
-    log_time = "%(asctime)-s "
-    log_level = "%(levelname)-8s "
-    log_message = "%(message)s (%(filename)s:%(lineno)d)"
+class ColoredFormatter(logging.Formatter):
+    """Format package console records with a color for each supported level."""
 
-    FORMATS = {
-        logging.DEBUG: log_time + magenta + log_level + reset + log_message,
-        logging.INFO: log_time + grey + log_level + reset + log_message,
-        logging.WARNING: log_time + yellow + log_level + reset + log_message,
-        logging.ERROR: log_time + red + log_level + reset + log_message,
-        logging.CRITICAL: log_time + bold_red + log_level + reset + log_message,
-        OK_LOG_LEVEL: log_time + green + log_level + reset + log_message,
-        FINDER_LOG_LEVEL: log_time + green + log_level + reset + log_message
+    def __init__(self):
+        super().__init__()
+        self._formatters = {
+            level: logging.Formatter(
+                "%(asctime)s "
+                + color
+                + "%(levelname)-8s"
+                + _RESET
+                + " %(message)s (%(filename)s:%(lineno)d)",
+                _DATE_FORMAT,
+            )
+            for level, color in _LEVEL_COLORS.items()
         }
-        
+        self._default_formatter = logging.Formatter(_LOG_FORMAT, _DATE_FORMAT)
+
     def format(self, record):
-        log_fmt = self.FORMATS.get(record.levelno)
-        formatter = logging.Formatter(log_fmt, "%Y-%m-%d %H:%M:%S")
+        formatter = self._formatters.get(record.levelno, self._default_formatter)
         return formatter.format(record)
 
 
-class FileLoggingFormatter(logging.Formatter):
-    """ Formatter for the file logging without colors."""
-    log_time = "%(asctime)-s "
-    log_level = "%(levelname)-8s "
-    log_message = "%(message)s (%(filename)s:%(lineno)d)"
-
-    FORMATS = {
-        logging.DEBUG: log_time + log_level + log_message,
-        logging.INFO: log_time + log_level + log_message,
-        logging.WARNING: log_time + log_level + log_message,
-        logging.ERROR: log_time + log_level + log_message,
-        logging.CRITICAL: log_time + log_level + log_message,
-        OK_LOG_LEVEL: log_time + log_level + log_message,
-        FINDER_LOG_LEVEL: log_time + log_level + log_message
-        }
-        
-    def format(self, record):
-        log_fmt = self.FORMATS.get(record.levelno)
-        formatter = logging.Formatter(log_fmt, "%Y-%m-%d %H:%M:%S")
-        return formatter.format(record)
+def _ok(self, message, *args, **kwargs):
+    """Log a successful operation while retaining the external caller."""
+    if self.isEnabledFor(OK_LOG_LEVEL):
+        # This wrapper adds one frame. Incrementing a supplied stacklevel also
+        # preserves callers that deliberately report on behalf of their caller.
+        kwargs["stacklevel"] = kwargs.get("stacklevel", 1) + 1
+        self._log(OK_LOG_LEVEL, message, args, **kwargs)
 
 
-def console_logger():
-    # Define a new log level method in the logger object
-    logger = logging.getLogger()
+def _remove_owned_handlers():
+    """Detach and close handlers created by this module."""
+    for handler in list(logger.handlers):
+        if getattr(handler, _HANDLER_MARKER, False):
+            logger.removeHandler(handler)
+            handler.close()
+
+
+def _console_handler():
+    handler = logging.StreamHandler()
+    handler.setLevel(logging.DEBUG)
+    handler.setFormatter(ColoredFormatter())
+    setattr(handler, _HANDLER_MARKER, True)
+    return handler
+
+
+def _file_handler(log_file):
+    handler = logging.handlers.RotatingFileHandler(
+        log_file,
+        mode="a",
+        maxBytes=1_000_000,
+        backupCount=7,
+        encoding="utf-8",
+    )
+    handler.setLevel(logging.DEBUG)
+    handler.setFormatter(logging.Formatter(_LOG_FORMAT, _DATE_FORMAT))
+    setattr(handler, _HANDLER_MARKER, True)
+    return handler
+
+
+def _configure_logger(output_mode=None):
+    """Configure exactly one package-owned output handler."""
+    selected_mode = OUTPUT_MODE if output_mode is None else output_mode
+    if selected_mode not in {"file", "console"}:
+        raise ValueError("OUTPUT_MODE must be either 'file' or 'console'")
+
     logger.setLevel(logging.DEBUG)
-            
-    # Define a custom logging method 'ok' and 'OK'
-    def ok(message, *args, **kwargs):
-        if logger.isEnabledFor(OK_LOG_LEVEL):
-            logger._log(OK_LOG_LEVEL, message, args, **kwargs)
+    logger.propagate = False
+    logger.disabled = False
+    logger.ok = MethodType(_ok, logger)
 
-    def OK(message, *args, **kwargs):
-        if logger.isEnabledFor(OK_LOG_LEVEL):
-            logger._log(OK_LOG_LEVEL, message, args, **kwargs)
+    # Only handlers marked here belong to this package. Consumer handlers, if
+    # any, are outside this module's ownership and are left unchanged.
+    _remove_owned_handlers()
 
-    def finder(message, *args, **kwargs):
-        if logger.isEnabledFor(FINDER_LOG_LEVEL):
-            logger._log(FINDER_LOG_LEVEL, message, args, **kwargs)
-
-    def FINDER(message, *args, **kwargs):
-        if logger.isEnabledFor(FINDER_LOG_LEVEL):
-            logger._log(FINDER_LOG_LEVEL, message, args, **kwargs)
-
-    # Attach the custom method to the logger
-    logger.ok = ok
-    logger.OK = OK
-    logger.finder = finder
-    logger.FINDER = FINDER
-    
-    logging.ok = ok
-    logging.OK = OK
-    logging.finder = finder
-    logging.FINDER = FINDER
-
-    # Create console handler and set level to debug
-    ch = logging.StreamHandler()
-    # Handle all log levels
-    ch.setLevel(logging.NOTSET)
-    # Create formatter
-    formatter = LoggingFormatter()
-    # Add formatter to ch
-    ch.setFormatter(formatter)
-    # Add ch to logger
-    logger.addHandler(ch)
-
-    return logger
-
-def file_logger(log_file, module_name=None, overwrite=False, rotate=False, level=logging.DEBUG):
-    logger = logging.getLogger(module_name)
-    logger.setLevel(level)
-    
-        # Define a custom logging method 'ok' and 'OK'
-    def ok(message, *args, **kwargs):
-        if logger.isEnabledFor(OK_LOG_LEVEL):
-            logger._log(OK_LOG_LEVEL, message, args, **kwargs)
-
-    def OK(message, *args, **kwargs):
-        if logger.isEnabledFor(OK_LOG_LEVEL):
-            logger._log(OK_LOG_LEVEL, message, args, **kwargs)
-
-    def finder(message, *args, **kwargs):
-        if logger.isEnabledFor(FINDER_LOG_LEVEL):
-            logger._log(FINDER_LOG_LEVEL, message, args, **kwargs)
-
-    def FINDER(message, *args, **kwargs):
-        if logger.isEnabledFor(FINDER_LOG_LEVEL):
-            logger._log(FINDER_LOG_LEVEL, message, args, **kwargs)
-
-    # Attach the custom method to the logger
-    logger.ok = ok
-    logger.OK = OK
-    logger.finder = finder
-    logger.FINDER = FINDER
-    
-    logging.ok = ok
-    logging.OK = OK
-    logging.finder = finder
-    logging.FINDER = FINDER
-
-    # Create file handler and set level to debug
-    mode = "w+" if overwrite else "a"
-    if rotate:
-        try:
-            fh = logging.handlers.RotatingFileHandler(
-                log_file, maxBytes=1000000, backupCount=7, 
-                encoding='utf-8', mode=mode)
-        except Exception as e:
-            fh = logging.FileHandler(log_file, mode=mode, encoding='utf-8')
+    if selected_mode == "console":
+        handler = _console_handler()
     else:
-        fh = logging.FileHandler(log_file, mode=mode, encoding='utf-8')
+        log_file = (
+            os.environ["PARAMWS_LOG_FILE"]
+            if "PARAMWS_LOG_FILE" in os.environ
+            else "./paramws.log"
+        )
+        try:
+            handler = _file_handler(log_file)
+        except (OSError, ValueError) as error:
+            # Do not retry the unusable path. Install the console handler first
+            # so the package warning is emitted through its normal logger.
+            handler = _console_handler()
+            logger.addHandler(handler)
+            logger.warning(
+                "Could not open paramws log file %r: %s; "
+                "falling back to console output",
+                log_file,
+                error,
+            )
+            return logger
 
-    fh.setLevel(logging.NOTSET)
-    
-    # Create the formatter
-    formatter = FileLoggingFormatter()
-    fh.setFormatter(formatter)
-    
-    # Add fh to logger, but prevent duplicate handlers
-    if not any(isinstance(h, logging.FileHandler) and h.baseFilename == fh.baseFilename
-           for h in logger.handlers):
-        logger.addHandler(fh)
-
+    logger.addHandler(handler)
     return logger
 
 
-if __name__ == "__main__":
-    # Test the logger
-    console_logger()
-    
-    logging.info("info message")
-    logging.getLogger().debug("debug message")
-    logging.ok("OK message")
-    logging.getLogger().ok("ok message")
-    logging.warning("warning message")
-    logging.error("error message")
-    logging.critical("critical message")
+_configure_logger()
