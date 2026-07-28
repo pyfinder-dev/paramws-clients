@@ -1,3 +1,7 @@
+# Sequence overview
+
+See the [developer sequence diagram](sequence_diagram.svg).
+
 # Developer class diagrams
 
 These diagrams are selective views of the implemented architecture. They omit
