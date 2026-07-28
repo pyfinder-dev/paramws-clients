@@ -1,6 +1,6 @@
 # Sequence overview
 
-See the [developer sequence diagram](sequence_diagram.svg).
+![Developer sequence diagram](sequence_diagram.svg)
 
 # Developer class diagrams
 
