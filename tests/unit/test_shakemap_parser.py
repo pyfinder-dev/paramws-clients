@@ -14,6 +14,43 @@ from paramws.clients.services.shakemap_data import ShakeMapStationNode
 module_path = os.path.dirname(os.path.abspath(__file__))
 
 
+def assert_comcat_only_fields_are_absent(
+        test_case, event_data, station, component):
+    """Verify that another provider need not manufacture ComCat-only fields."""
+    component_getters = (
+        component.get_acceleration_units,
+        component.get_acceleration_uncertainty,
+        component.get_velocity_units,
+        component.get_velocity_uncertainty,
+        component.get_psa03_units,
+        component.get_psa03_uncertainty,
+        component.get_psa10_units,
+        component.get_psa10_uncertainty,
+        component.get_psa30_units,
+        component.get_psa30_uncertainty,
+    )
+    station_getters = (
+        station.get_geometry,
+        station.get_station_type,
+        station.get_intensity,
+        station.get_intensity_uncertainty,
+        station.get_response_count,
+        station.get_distance,
+    )
+    event_getters = (
+        event_data.get_geometry,
+        event_data.get_place,
+        event_data.get_status,
+        event_data.get_contributor_network,
+        event_data.get_contributor_code,
+        event_data.get_contributor_sources,
+        event_data.get_product_index,
+    )
+
+    for getter in component_getters + station_getters + event_getters:
+        test_case.assertIsNone(getter(), getter.__name__)
+
+
 class TestESMShakeMapParser(unittest.TestCase):
     """Test the parser for the ESM ShakeMap web service."""
 
@@ -84,6 +121,25 @@ class TestESMShakeMapParser(unittest.TestCase):
                 self.assertEqual(component.get(field_name + "flag"), "0")
             self.assertEqual(component.get_component_depth(), 0.0)
         self.assertEqual(visited_components, set(expected_components))
+
+    def test_comcat_only_getters_are_optional_for_esm_models(self):
+        event_path = os.path.join(
+            module_path, '..', 'fixtures', 'esmws-event.xml')
+        station_path = os.path.join(
+            module_path, '..', 'fixtures', 'esmws-eventdata.xml')
+        with open(event_path, 'r') as event_file:
+            event_data = ESMShakeMapParser().parse_earthquake(
+                event_file.read())
+        with open(station_path, 'r') as station_file:
+            station = ESMShakeMapParser().parse(
+                station_file.read()).get_stations()[0]
+        component = station.get_components()[0]
+
+        assert_comcat_only_fields_are_absent(
+            self, event_data, station, component)
+        self.assertEqual(event_data.get_event_id(), "20170524_0000045")
+        self.assertEqual(station.get_station_id(), "HI.KRK1")
+        self.assertAlmostEqual(component.get_acceleration(), 0.016794504)
 
     def test_singleton_station_and_component_are_normalized_to_lists(self):
         xml = """
@@ -279,6 +335,25 @@ class TestRRSMShakeMapParser(unittest.TestCase):
         self.assertEqual(first_component.get_acceleration_flag(), "0")
         self.assertAlmostEqual(first_component.get_velocity(), 0.045)
         self.assertEqual(first_component.get_velocity_flag(), "1")
+
+    def test_comcat_only_getters_are_optional_for_rrsm_models(self):
+        event_path = os.path.join(
+            module_path, '..', 'fixtures', 'rrsm-shakemap-event.xml')
+        station_path = os.path.join(
+            module_path, '..', 'fixtures', 'rrsm-shakemap-stations.xml')
+        with open(event_path, 'r') as event_file:
+            event_data = RRSMShakeMapParser().parse_earthquake(
+                event_file.read())
+        with open(station_path, 'r') as station_file:
+            station = RRSMShakeMapParser().parse(
+                station_file.read()).get_stations()[0]
+        component = station.get_components()[0]
+
+        assert_comcat_only_fields_are_absent(
+            self, event_data, station, component)
+        self.assertEqual(event_data.get_event_id(), "rrsm-event-one")
+        self.assertEqual(station.get_station_id(), "NW.AAA")
+        self.assertAlmostEqual(component.get_acceleration(), 0.125)
 
     def test_singleton_station_and_component_are_normalized_to_lists(self):
         xml = """

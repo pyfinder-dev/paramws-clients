@@ -1,0 +1,160 @@
+{
+  "type": "Feature",
+  "properties": {
+    "mag": 7.1,
+    "place": "2019 Ridgecrest Earthquake Sequence",
+    "time": 1562383193040,
+    "updated": 1760000000000,
+    "tz": null,
+    "url": "https://earthquake.usgs.gov/earthquakes/eventpage/ci38457511",
+    "detail": "https://earthquake.usgs.gov/fdsnws/event/1/query?eventid=ci38457511&format=geojson",
+    "felt": 71217,
+    "cdi": 7.9,
+    "mmi": 8.0,
+    "alert": "yellow",
+    "status": "reviewed",
+    "tsunami": 0,
+    "sig": 1616,
+    "net": "ci",
+    "code": "38457511",
+    "ids": ",ci38457511,us70004bn0,",
+    "sources": ",ci,us,",
+    "types": ",dyfi,finite-fault,origin,phase-data,shakemap,",
+    "nst": 77,
+    "dmin": 0.04616,
+    "rms": 0.22,
+    "gap": 43,
+    "magType": "mw",
+    "type": "earthquake",
+    "title": "M 7.1 - 2019 Ridgecrest Earthquake Sequence",
+    "products": {
+      "shakemap": [
+        {
+          "id": "urn:usgs-product:us:shakemap:us70004bn0:1750000000000",
+          "type": "shakemap",
+          "code": "us70004bn0",
+          "source": "us",
+          "updateTime": 1750000000000,
+          "status": "UPDATE",
+          "preferredWeight": 5,
+          "properties": {
+            "eventsource": "us",
+            "eventsourcecode": "70004bn0",
+            "version": "20"
+          },
+          "contents": {
+            "download/stationlist.json": {
+              "contentType": "application/json",
+              "lastModified": 1750000000000,
+              "length": 1234,
+              "url": "https://earthquake.usgs.gov/product/shakemap/us70004bn0/us/1750000000000/download/stationlist.json"
+            }
+          }
+        },
+        {
+          "id": "urn:usgs-product:ci:shakemap:ci38457511:1740000000000",
+          "type": "shakemap",
+          "code": "ci38457511",
+          "source": "ci",
+          "updateTime": 1740000000000,
+          "status": "UPDATE",
+          "preferredWeight": 6,
+          "properties": {
+            "eventsource": "ci",
+            "eventsourcecode": "38457511",
+            "version": "19"
+          },
+          "contents": {
+            "download/stationlist.json": {
+              "contentType": "application/json",
+              "lastModified": 1740000000000,
+              "length": 1210,
+              "url": "https://earthquake.usgs.gov/product/shakemap/ci38457511/ci/1740000000000/download/stationlist.json"
+            }
+          }
+        },
+        {
+          "id": "urn:usgs-product:atlas:shakemap:ci38457511:1760000000000",
+          "type": "shakemap",
+          "code": "ci38457511",
+          "source": "atlas",
+          "updateTime": 1760000000000,
+          "status": "UPDATE",
+          "preferredWeight": 6,
+          "properties": {
+            "eventsource": "ci",
+            "eventsourcecode": "38457511",
+            "version": "21"
+          },
+          "contents": {
+            "download/stationlist.json": {
+              "contentType": "application/json",
+              "lastModified": 1760000000000,
+              "length": 1250,
+              "url": "https://earthquake.usgs.gov/product/shakemap/ci38457511/atlas/1760000000000/download/stationlist.json"
+            },
+            "download/stationlist.xml": {
+              "contentType": "application/xml",
+              "url": "https://earthquake.usgs.gov/product/shakemap/ci38457511/atlas/1760000000000/download/stationlist.xml"
+            }
+          }
+        }
+      ],
+      "dyfi": [
+        {
+          "id": "urn:usgs-product:us:dyfi:ci38457511:1760000001000",
+          "type": "dyfi",
+          "code": "ci38457511",
+          "source": "us",
+          "updateTime": 1760000001000,
+          "status": "UPDATE",
+          "preferredWeight": 158,
+          "properties": {
+            "eventsource": "ci",
+            "eventsourcecode": "38457511",
+            "maxmmi": "7.9",
+            "num-responses": "71217"
+          },
+          "contents": {
+            "dyfi_geo_1km.geojson": {
+              "contentType": "application/octet-stream",
+              "lastModified": 1760000001000,
+              "length": 2234,
+              "url": "https://earthquake.usgs.gov/product/dyfi/ci38457511/us/1760000001000/dyfi_geo_1km.geojson"
+            },
+            "dyfi_geo_10km.geojson": {
+              "contentType": "application/octet-stream",
+              "url": "https://earthquake.usgs.gov/product/dyfi/ci38457511/us/1760000001000/dyfi_geo_10km.geojson"
+            },
+            "cdi_geo.xml": {
+              "contentType": "application/xml",
+              "url": "https://earthquake.usgs.gov/product/dyfi/ci38457511/us/1760000001000/cdi_geo.xml"
+            }
+          }
+        }
+      ],
+      "origin": [
+        {
+          "id": "urn:usgs-product:ci:origin:ci38457511:1760000002000",
+          "type": "origin",
+          "code": "ci38457511",
+          "source": "ci",
+          "updateTime": 1760000002000,
+          "status": "UPDATE",
+          "preferredWeight": 157,
+          "properties": {},
+          "contents": {}
+        }
+      ]
+    }
+  },
+  "geometry": {
+    "type": "Point",
+    "coordinates": [
+      -117.5993333,
+      35.7695,
+      8.0
+    ]
+  },
+  "id": "ci38457511"
+}

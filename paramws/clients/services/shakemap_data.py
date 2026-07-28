@@ -1,11 +1,29 @@
 # -*- coding: utf-8 -*- 
+"""
+Scientific data models shared by ESM, RRSM, and USGS ComCat ShakeMap content.
+
+Each provider fills the fields it supplies, so provider-specific metadata is
+optional. ComCat station collections can contain both instrumented seismic
+stations and macroseismic intensity records; macroseismic stations may have no
+components. Component units, flags, and uncertainties remain provider-native
+rather than being normalized across services.
+
+Provider-specific getters expose optional fields; another provider is not
+required to manufacture data it does not supply. A getter returns ``None``
+when its field is absent, while an explicit provider empty string remains
+``""``.
+"""
+
 from paramws.clients.services.basedatastructure import BaseDataStructure
 
 class ShakeMapComponentNode(BaseDataStructure):
-    """ 
-    Component-level data in the ESM/RRSM shakemap web service.
-    This level includes channel info and amplitudes. The class
-    is a part of the ShakeMapStationAmplitudes data structure.
+    """
+    Component-level channel and amplitude data shared across providers.
+
+    Provider-specific fields such as units and uncertainty are optional and
+    retain their native representation. This class is part of the
+    ShakeMapStationAmplitudes hierarchy. Their getters return ``None`` when
+    absent and preserve an explicit provider empty string.
     """
     def __init__(self, data_dict=None, **kwargs):
         super().__init__(data_dict=data_dict, kwargs=kwargs)
@@ -25,6 +43,22 @@ class ShakeMapComponentNode(BaseDataStructure):
     def get_acceleration_flag(self):
         """ Return the acceleration flag. """
         return self.get('accflag')
+
+    def get_acceleration_units(self):
+        """
+        Return ``units`` from the USGS ComCat channel ``amplitudes[]`` entry
+        with ``name="pga"``, the native acceleration units, or ``None`` when
+        absent.
+        """
+        return self.get('accunits')
+
+    def get_acceleration_uncertainty(self):
+        """
+        Return ``ln_sigma`` from the USGS ComCat channel ``amplitudes[]``
+        entry with ``name="pga"``, or ``None`` when absent. This is the
+        logarithmic measurement uncertainty.
+        """
+        return self.get('accln_sigma')
     
     def get_velocity(self):
         """ Return the velocity. """
@@ -33,6 +67,22 @@ class ShakeMapComponentNode(BaseDataStructure):
     def get_velocity_flag(self):
         """ Return the velocity flag. """
         return self.get('velflag')
+
+    def get_velocity_units(self):
+        """
+        Return ``units`` from the USGS ComCat channel ``amplitudes[]`` entry
+        with ``name="pgv"``, the native velocity units, or ``None`` when
+        absent.
+        """
+        return self.get('velunits')
+
+    def get_velocity_uncertainty(self):
+        """
+        Return ``ln_sigma`` from the USGS ComCat channel ``amplitudes[]``
+        entry with ``name="pgv"``, or ``None`` when absent. This is the
+        logarithmic measurement uncertainty.
+        """
+        return self.get('velln_sigma')
     
     def get_psa03(self):
         """ Return the PSA03. """
@@ -41,6 +91,22 @@ class ShakeMapComponentNode(BaseDataStructure):
     def get_psa03_flag(self):
         """ Return the PSA03 flag. """
         return self.get('psa03flag')
+
+    def get_psa03_units(self):
+        """
+        Return ``units`` from the USGS ComCat channel ``amplitudes[]`` entry
+        with ``name="sa(0.3)"``, the native spectral-acceleration units, or
+        ``None`` when absent.
+        """
+        return self.get('psa03units')
+
+    def get_psa03_uncertainty(self):
+        """
+        Return ``ln_sigma`` from the USGS ComCat channel ``amplitudes[]``
+        entry with ``name="sa(0.3)"``, or ``None`` when absent. This is the
+        logarithmic measurement uncertainty.
+        """
+        return self.get('psa03ln_sigma')
     
     def get_psa10(self):
         """ Return the PSA10. """
@@ -49,6 +115,22 @@ class ShakeMapComponentNode(BaseDataStructure):
     def get_psa10_flag(self):
         """ Return the PSA10 flag. """
         return self.get('psa10flag')
+
+    def get_psa10_units(self):
+        """
+        Return ``units`` from the USGS ComCat channel ``amplitudes[]`` entry
+        with ``name="sa(1.0)"``, the native spectral-acceleration units, or
+        ``None`` when absent.
+        """
+        return self.get('psa10units')
+
+    def get_psa10_uncertainty(self):
+        """
+        Return ``ln_sigma`` from the USGS ComCat channel ``amplitudes[]``
+        entry with ``name="sa(1.0)"``, or ``None`` when absent. This is the
+        logarithmic measurement uncertainty.
+        """
+        return self.get('psa10ln_sigma')
     
     def get_psa30(self):
         """ Return the PSA30. """
@@ -58,13 +140,32 @@ class ShakeMapComponentNode(BaseDataStructure):
         """ Return the PSA30 flag. """
         return self.get('psa30flag')
 
+    def get_psa30_units(self):
+        """
+        Return ``units`` from the USGS ComCat channel ``amplitudes[]`` entry
+        with ``name="sa(3.0)"``, the native spectral-acceleration units, or
+        ``None`` when absent.
+        """
+        return self.get('psa30units')
+
+    def get_psa30_uncertainty(self):
+        """
+        Return ``ln_sigma`` from the USGS ComCat channel ``amplitudes[]``
+        entry with ``name="sa(3.0)"``, or ``None`` when absent. This is the
+        logarithmic measurement uncertainty.
+        """
+        return self.get('psa30ln_sigma')
+
 
 class ShakeMapStationNode(BaseDataStructure):
     """
-    Station-level data for the ESM/RRSM shakemap output.
-    This level includes station info and a list for components.
-    This class is a part of the ShakeMapStationAmplitudes 
-    data structure.
+    Station-level data shared by ESM, RRSM, and USGS ComCat.
+
+    A station retains its provider metadata and a list of components. ComCat
+    records explicitly distinguish seismic and macroseismic station types;
+    macroseismic stations can validly have an empty component list. Optional
+    USGS getters return ``None`` when absent and preserve an explicit empty
+    string.
     """
     def __init__(self, data_dict=None, **kwargs):
         super().__init__(data_dict=data_dict, kwargs=kwargs)
@@ -104,12 +205,58 @@ class ShakeMapStationNode(BaseDataStructure):
     def get_installation_type(self):
         """ Return the installation type. """
         return self.get('insttype')
+
+    def get_geometry(self):
+        """
+        Return the USGS ComCat ShakeMap station GeoJSON Feature ``geometry``,
+        which preserves its complete location, or ``None`` when absent.
+        """
+        return self.get('geometry')
+
+    def get_station_type(self):
+        """
+        Return USGS ComCat station property ``station_type``, which identifies
+        a seismic or macroseismic record, or ``None`` when absent.
+        """
+        return self.get('station_type')
+
+    def get_intensity(self):
+        """
+        Return USGS ComCat station property ``intensity``, the station's
+        reported intensity, or ``None`` when absent.
+        """
+        return self.get('intensity')
+
+    def get_intensity_uncertainty(self):
+        """
+        Return the model alias for USGS ``intensity_stddev``, the station
+        intensity uncertainty, or ``None`` when absent.
+
+        The original USGS field remains available in the model.
+        """
+        return self.get('intensity_uncertainty')
+
+    def get_response_count(self):
+        """
+        Return USGS ComCat station property ``nresp``, the number of responses
+        represented by the station, or ``None`` when absent.
+        """
+        return self.get('nresp')
+
+    def get_distance(self):
+        """
+        Return USGS ComCat station property ``distance``, the provider's
+        station distance, or ``None`` when absent.
+        """
+        return self.get('distance')
     
 class ShakeMapStationAmplitudes(BaseDataStructure):
     """
-    Station amplitudes data structure for the ESM/RRSM shakemap web service.
-    This data structure encapsulates the data returned by the web service
-    when format='event_dat'.
+    Shared collection of ShakeMap seismic and macroseismic station records.
+
+    ESM and RRSM normally supply instrument amplitudes, while a ComCat
+    station-list collection may also include macroseismic intensity records.
+    Provider-specific collection metadata remains optional.
     """
     def __init__(self, data_dict=None, **kwargs):
         super().__init__(data_dict=data_dict, kwargs=kwargs)
@@ -130,13 +277,13 @@ class ShakeMapStationAmplitudes(BaseDataStructure):
     
 class ShakeMapEventData(BaseDataStructure):
     """
-    Event data structure for the ESM/RRSM shakemap web service.
-    Encapsulates the data returned by the web service to avoid
-    dealing with the dictionary and its keys directly. 
+    Event data shared by ESM, RRSM, and USGS ComCat.
 
-    The get_*() methods exist for both format=event and format=event_dat.
-    Therefore, the main client classes handle what should be returned
-    based on the format (data set returned by the web service).
+    The common event fields are available through explicit getters, while
+    optional provider-specific metadata such as ComCat status, contributor
+    information, geometry, and products remains in the same model. Optional
+    USGS getters return ``None`` when absent and preserve an explicit empty
+    string.
     """
     def __init__(self, data_dict=None, **kwargs):
         super().__init__(data_dict=data_dict, kwargs=kwargs)
@@ -188,4 +335,52 @@ class ShakeMapEventData(BaseDataStructure):
     def get_loc_string(self):
         """ Return the location string. """
         return self.get('locstring')
-        
+
+    def get_geometry(self):
+        """
+        Return the detailed USGS ComCat GeoJSON Feature ``geometry``, the complete
+        event hypocentre point, or ``None`` when absent.
+        """
+        return self.get('geometry')
+
+    def get_place(self):
+        """
+        Return USGS ComCat event property ``place``, the provider's event location
+        description, or ``None`` when absent.
+        """
+        return self.get('place')
+
+    def get_status(self):
+        """
+        Return USGS ComCat event property ``status``, the event review status, or
+        ``None`` when absent.
+        """
+        return self.get('status')
+
+    def get_contributor_network(self):
+        """
+        Return USGS ComCat event property ``net``, the network contributing the
+        preferred event, or ``None`` when absent.
+        """
+        return self.get('net')
+
+    def get_contributor_code(self):
+        """
+        Return USGS ComCat event property ``code``, the contributor's native event
+        code, or ``None`` when absent.
+        """
+        return self.get('code')
+
+    def get_contributor_sources(self):
+        """
+        Return USGS ComCat event property ``sources``, the provider-native source
+        list string, or ``None`` when absent.
+        """
+        return self.get('sources')
+
+    def get_product_index(self):
+        """
+        Return USGS ComCat event property ``products``, the complete product index,
+        or ``None`` when absent.
+        """
+        return self.get('products')

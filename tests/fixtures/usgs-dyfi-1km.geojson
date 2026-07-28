@@ -1,0 +1,86 @@
+{
+  "type": "FeatureCollection",
+  "bbox": [
+    -117.62,
+    35.76,
+    -117.58,
+    35.8
+  ],
+  "features": [
+    {
+      "type": "Feature",
+      "id": "91052-1",
+      "properties": {
+        "cdi": 7.4,
+        "stddev": 0.0,
+        "nresp": 1,
+        "name": "Ridgecrest, CA",
+        "dist": 0.0
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -117.61,
+              35.77
+            ],
+            [
+              -117.6,
+              35.77
+            ],
+            [
+              -117.6,
+              35.78
+            ],
+            [
+              -117.61,
+              35.78
+            ],
+            [
+              -117.61,
+              35.77
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "cdi": 6.2,
+        "stddev": 0.51,
+        "nresp": 18,
+        "name": "Trona, CA",
+        "dist": 25.7
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -117.59,
+              35.78
+            ],
+            [
+              -117.58,
+              35.78
+            ],
+            [
+              -117.58,
+              35.79
+            ],
+            [
+              -117.59,
+              35.79
+            ],
+            [
+              -117.59,
+              35.78
+            ]
+          ]
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,118 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "id": "CI.CLC",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -117.59751,
+          35.81574
+        ]
+      },
+      "properties": {
+        "network": "CI",
+        "code": "CLC",
+        "name": "China Lake",
+        "station_type": "seismic",
+        "distance": 5.18,
+        "elev": 775.0,
+        "intensity": 7.1,
+        "intensity_stddev": 0.32,
+        "nresp": null,
+        "pga": 75.4,
+        "pgv": 58.2,
+        "predicted": false,
+        "channels": [
+          {
+            "name": "--.HNZ",
+            "azimuth": 0.0,
+            "dip": -90.0,
+            "amplitudes": [
+              {
+                "name": "pga",
+                "value": 75.4,
+                "units": "%g",
+                "flag": "0",
+                "ln_sigma": 0.12
+              },
+              {
+                "name": "pgv",
+                "value": 58.2,
+                "units": "cm/s",
+                "flag": "0",
+                "ln_sigma": 0.15
+              },
+              {
+                "name": "sa(0.3)",
+                "value": 138.8,
+                "units": "%g",
+                "flag": "0",
+                "ln_sigma": 0.18
+              },
+              {
+                "name": "sa(1.0)",
+                "value": 96.1,
+                "units": "%g",
+                "flag": "0",
+                "ln_sigma": 0.2
+              },
+              {
+                "name": "sa(3.0)",
+                "value": 41.7,
+                "units": "%g",
+                "flag": "0",
+                "ln_sigma": 0.24
+              }
+            ]
+          },
+          {
+            "name": "--.HNE",
+            "azimuth": 90.0,
+            "dip": 0.0,
+            "amplitudes": [
+              {
+                "name": "pga",
+                "value": 68.3,
+                "units": "%g",
+                "flag": "",
+                "ln_sigma": null
+              },
+              {
+                "name": "pgv",
+                "value": 49.5,
+                "units": "cm/s",
+                "flag": "0",
+                "ln_sigma": 0.16
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -117.61,
+          35.77
+        ]
+      },
+      "properties": {
+        "network": "DYFI",
+        "code": "91052",
+        "name": "ZIP 93555",
+        "station_type": "macroseismic",
+        "distance": 1.1,
+        "intensity": 7.4,
+        "intensity_stddev": 0.58,
+        "nresp": 139,
+        "pga": "null",
+        "pgv": "",
+        "predicted": false
+      }
+    }
+  ]
+}
