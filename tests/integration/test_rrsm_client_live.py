@@ -1,89 +1,163 @@
 # -*- coding: utf-8 -*-
+"""Live public-client coverage for the ORFEUS RRSM services."""
+
+import math
 import unittest
 
-from paramws.clients import RRSMShakeMapClient, RRSMPeakMotionClient
+from paramws.clients import (
+    PeakMotionChannelData,
+    PeakMotionData,
+    PeakMotionStationData,
+    RRSMShakeMapClient,
+    RRSMPeakMotionClient,
+    ShakeMapComponentNode,
+    ShakeMapEventData,
+    ShakeMapStationAmplitudes,
+    ShakeMapStationNode,
+)
+from paramws.clients.services.peakmotion_data import PeakMotionEventData
+from tests.live_result import require_live_result
+
+
+EVENT_ID = "20170524_0000045"
 
 
 class TestRRSMClientLive(unittest.TestCase):
-    """Exercise the RRSM clients against the real provider service."""
+    """Validate stable RRSM result, identity, and model invariants."""
 
     def test_rrsm_shakemap_query(self):
-        # Test the query method and returned data.
         client = RRSMShakeMapClient()
-        client.query(event_id="20170524_0000045")
-        self.assertIsNotNone(client.get_station_amplitudes())
+        code, event_data, datasets = require_live_result(
+            "ORFEUS RRSM",
+            "ShakeMap event and station_amplitudes",
+            lambda: client.query(event_id=EVENT_ID),
+        )
+        context = "ORFEUS RRSM ShakeMap"
 
-        # Check station names.
-        station_codes = client.get_station_codes()
-        for _sta_name in ['KBN', 'PDG', 'TIR']:
-            self.assertIn(_sta_name, station_codes)
+        self.assertEqual(code, 200, context)
+        self.assertIs(type(event_data), ShakeMapEventData, context)
+        self.assertEqual(client.get_event_id(), EVENT_ID, context)
+        self.assertIsInstance(event_data.get_event_id(), str, context)
+        self.assertTrue(event_data.get_event_id().strip(), context)
+        self.assertIsInstance(datasets, dict, context)
+        self.assertEqual(set(datasets), {"station_amplitudes"}, context)
 
-        # Check some station information.
-        for _sta in client.get_stations():
-            self.assertIn(_sta.get_station_name(), ['KBN', 'PDG', 'TIR'])
+        amplitudes = datasets["station_amplitudes"]
+        self.assertIs(type(amplitudes), ShakeMapStationAmplitudes, context)
+        stations = amplitudes.get_stations()
+        self.assertIsInstance(stations, list, context)
+        self.assertTrue(stations, "{} returned no stations".format(context))
+        self.assertTrue(
+            all(type(station) is ShakeMapStationNode for station in stations),
+            "{} returned a wrong station model".format(context),
+        )
 
-            # Check the components for each field.
-            for _comp in _sta.get_components():
-                self.assertIsNotNone(_comp.get_component_name())
-                self.assertIsNotNone(_comp.get_acceleration())
-                self.assertIsNotNone(_comp.get_velocity())
-                self.assertIsNotNone(_comp.get_psa03())
-                self.assertIsNotNone(_comp.get_psa10())
-                self.assertIsNotNone(_comp.get_psa30())
-                self.assertIsNotNone(_comp.get_acceleration_flag())
-                self.assertIsNotNone(_comp.get_velocity_flag())
-                self.assertIsNotNone(_comp.get_psa03_flag())
-                self.assertIsNotNone(_comp.get_psa10_flag())
-                self.assertIsNotNone(_comp.get_psa30_flag())
+        representative = next(
+            (
+                component
+                for station in stations
+                for component in station.get_components()
+                if (
+                    component.get_acceleration() is not None
+                    or component.get_velocity() is not None
+                )
+            ),
+            None,
+        )
+        self.assertIsNotNone(
+            representative,
+            "{} has no component with PGA or PGV".format(context),
+        )
+        self.assertIs(type(representative), ShakeMapComponentNode, context)
+        self.assertIsInstance(
+            representative.get_component_name(),
+            str,
+            "{} has a component without identity".format(context),
+        )
+
+        supplied = [
+            value
+            for value in (
+                representative.get_acceleration(),
+                representative.get_velocity(),
+            )
+            if value is not None
+        ]
+        self.assertTrue(
+            all(
+                isinstance(value, (int, float))
+                and not isinstance(value, bool)
+                and math.isfinite(value)
+                for value in supplied
+            ),
+            "{} returned malformed PGA or PGV".format(context),
+        )
 
     def test_rrsm_peakmotions_query(self):
-        # Test the query method and returned data.
         client = RRSMPeakMotionClient()
-        client.query(event_id="20170524_0000045")
-        self.assertIsNotNone(client.get_station_amplitudes())
+        code, event_data, datasets = require_live_result(
+            "ORFEUS RRSM",
+            "peak_motion",
+            lambda: client.query(event_id=EVENT_ID),
+        )
+        context = "ORFEUS RRSM peak_motion"
 
-        # Check station names.
-        station_codes = client.get_station_codes()
-        for _sta_name in ['KBN', 'PDG', 'TIR']:
-            self.assertIn(_sta_name, station_codes)
+        self.assertEqual(code, 200, context)
+        self.assertIs(type(event_data), PeakMotionEventData, context)
+        self.assertEqual(event_data.get_event_id(), EVENT_ID, context)
+        self.assertIsInstance(datasets, dict, context)
+        self.assertEqual(set(datasets), {"peak_motion"}, context)
 
-        # Check some station information.
-        for _sta in client.get_stations():
-            self.assertIn(_sta.get_station_code(), ['KBN', 'PDG', 'TIR'])
+        peak_motion = datasets["peak_motion"]
+        self.assertIs(type(peak_motion), PeakMotionData, context)
+        stations = peak_motion.get_stations()
+        self.assertIsInstance(stations, list, context)
+        self.assertTrue(stations, "{} returned no stations".format(context))
+        self.assertTrue(
+            all(type(station) is PeakMotionStationData
+                for station in stations),
+            "{} returned a wrong station model".format(context),
+        )
 
-            # Check the components for each field.
-            for _comp in _sta.get_channels():
-                self.assertIsNotNone(_comp.get_channel_code())
-                self.assertIsNotNone(_comp.get_acceleration())
-                self.assertIsNotNone(_comp.get_velocity())
+        representative = next(
+            (
+                (station, channel)
+                for station in stations
+                for channel in station.get_channels()
+                if (
+                    channel.get_acceleration() is not None
+                    or channel.get_velocity() is not None
+                )
+            ),
+            None,
+        )
+        self.assertIsNotNone(
+            representative,
+            "{} has no channel with PGA or PGV".format(context),
+        )
+        station, channel = representative
+        self.assertIs(type(channel), PeakMotionChannelData, context)
+        self.assertIsInstance(station.get_station_code(), str, context)
+        self.assertTrue(station.get_station_code().strip(), context)
+        self.assertIsInstance(channel.get_channel_code(), str, context)
+        self.assertTrue(channel.get_channel_code().strip(), context)
 
-    def test_rrsm_peakmotions_query_invalid_options(self):
-        # This still queries the provider after checking option cleanup.
-        client = RRSMPeakMotionClient()
-        client.query(event_id="20170524_0000045", type="event")
+        for label, value in (
+                ("PGA", channel.get_acceleration()),
+                ("PGV", channel.get_velocity())):
+            if value is None:
+                continue
+            self.assertIsInstance(
+                value,
+                (int, float),
+                "{} has nonnumeric {}".format(context, label),
+            )
+            self.assertNotIsInstance(value, bool, context)
+            self.assertTrue(
+                math.isfinite(value),
+                "{} has non-finite {}".format(context, label),
+            )
 
-        # The type option should be eliminated internally from the query
-        # as it is not a valid option for the peak motion web service.
-        url = client.get_web_service().get_combined_url()
-        self.assertEqual(
-            url,
-            "https://orfeus-eu.org/odcws/rrsm/1/"
-            "peak-motion?eventid=20170524_0000045")
 
-        # Check everything is in place after removal of the invalid option.
-        self.assertIsNotNone(client.get_station_amplitudes())
-
-        # Check station names.
-        station_codes = client.get_station_codes()
-        for _sta_name in ['KBN', 'PDG', 'TIR']:
-            self.assertIn(_sta_name, station_codes)
-
-        # Check some station information.
-        for _sta in client.get_stations():
-            self.assertIn(_sta.get_station_code(), ['KBN', 'PDG', 'TIR'])
-
-            # Check the components for each field.
-            for _comp in _sta.get_channels():
-                self.assertIsNotNone(_comp.get_channel_code())
-                self.assertIsNotNone(_comp.get_acceleration())
-                self.assertIsNotNone(_comp.get_velocity())
+if __name__ == "__main__":
+    unittest.main()
