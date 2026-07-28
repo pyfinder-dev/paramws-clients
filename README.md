@@ -17,6 +17,9 @@ Import the five public clients from `paramws.clients`:
 | USGS ComCat | `USGSComCatClient` | `shakemap` | `ShakeMapStationAmplitudes` |
 | USGS ComCat | `USGSComCatClient` | `dyfi` | `FeltReportIntensityData` |
 
+For the implementation structure and class relationships, see the
+[developer class diagrams](docs/class-diagrams.md).
+
 Every concrete client has this query signature:
 
 ```python
