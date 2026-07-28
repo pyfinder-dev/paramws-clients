@@ -8,6 +8,7 @@ Import from here for convenience, rather than deep submodules.
 from .esm_client import ESMShakeMapClient
 from .rrsm_client import RRSMShakeMapClient, RRSMPeakMotionClient
 from .emsc_client import EMSCFeltReportClient
+from .usgs_client import USGSComCatClient
 
 # Data structures from the services module
 from .services import (
@@ -28,6 +29,7 @@ __all__ = [
     "RRSMShakeMapClient",
     "RRSMPeakMotionClient",
     "EMSCFeltReportClient",
+    "USGSComCatClient",
 
     # Data structures
     "PeakMotionData",
