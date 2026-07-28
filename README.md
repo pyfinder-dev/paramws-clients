@@ -248,11 +248,6 @@ accepts only the options documented for each client above.
 | USGS ComCat | [FDSN Event API](https://earthquake.usgs.gov/fdsnws/event/1/) · [ComCat products and fields](https://earthquake.usgs.gov/data/comcat/) |
 
 
-## License and conduct
-
-The project is licensed under the MIT License; see [LICENSE](./LICENSE).
-Contributors must follow [CODE_OF_CONDUCT.md](./CODE_OF_CONDUCT.md).
-
 ## Acknowledgment
 
 **paramws-clients** was initially developed as part of the EU project
@@ -262,3 +257,10 @@ under Grant Agreement No 101058129 for the Digital Twin Component (DTC) E6
 (“Rapid Source and Shaking Characterization”), which aims to provide rapid
 information on ground shaking and warnings for significant earthquakes in
 the Euro-Mediterranean region.
+
+
+## License and conduct
+
+The project is licensed under the MIT License; see [LICENSE](./LICENSE).
+Contributors must follow [CODE_OF_CONDUCT.md](./CODE_OF_CONDUCT.md).
+
