@@ -13,9 +13,7 @@ authors = [
   { name = "Savas Ceylan" }
 ]
 dependencies = [
-  "requests",
   "xmltodict==0.12.0",
-  "urllib3",
 ]
 
 # Optional: classifiers (adjust as needed)
@@ -25,15 +23,12 @@ classifiers = [
   "Operating System :: OS Independent",
 ]
 
-# Expose a CLI later: Optional if I want to make this package 
-# run from command line as a tool 
-#[project.scripts]
-#paramws = "paramws.cli:main"
-
 [tool.setuptools]
 # Package is at the project root
 package-dir = {"" = "."}
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["paramws*"]
+include = ["paramws", "paramws.*"]
+exclude = ["paramws.tests", "paramws.tests.*", "tests", "tests.*"]
+namespaces = false

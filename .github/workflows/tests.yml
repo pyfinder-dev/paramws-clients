@@ -29,6 +29,179 @@ jobs:
       - name: Run unit tests
         run: python -m unittest discover -s tests/unit -v
 
+  packaging-verification:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.14
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+
+      - name: Install packaging tools
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install build setuptools wheel
+
+      - name: Build wheel and source distribution
+        run: python -m build --no-isolation
+
+      - name: Inspect distribution contents and metadata
+        run: |
+          python - <<'PY'
+          from email.parser import Parser
+          from pathlib import Path, PurePosixPath
+          import tarfile
+          import zipfile
+
+          wheel_path, = Path("dist").glob("*.whl")
+          sdist_path, = Path("dist").glob("*.tar.gz")
+
+          with zipfile.ZipFile(wheel_path) as wheel:
+              wheel_names = set(wheel.namelist())
+              metadata_name, = (name for name in wheel_names
+                                if name.endswith(".dist-info/METADATA"))
+              wheel_metadata = Parser().parsestr(
+                  wheel.read(metadata_name).decode()
+              )
+
+          with tarfile.open(sdist_path, "r:gz") as sdist:
+              archived_names = set(sdist.getnames())
+              roots = {PurePosixPath(name).parts[0] for name in archived_names}
+              if len(roots) != 1:
+                  raise SystemExit(
+                      f"Source distribution has unexpected roots: {sorted(roots)}"
+                  )
+              sdist_root, = roots
+              # The sdist has one required wrapper directory; normalize it so
+              # source, wheel, and sdist module paths can be compared directly.
+              sdist_names = {"/".join(PurePosixPath(name).parts[1:])
+                             for name in archived_names
+                             if len(PurePosixPath(name).parts) > 1}
+              sdist_metadata = Parser().parsestr(
+                  sdist.extractfile(f"{sdist_root}/PKG-INFO").read().decode()
+              )
+
+          prohibited_parts = {".agent", ".mypy_cache", ".pytest_cache",
+                              ".ruff_cache", "__pycache__", "build", "dist",
+                              "tests"}
+          prohibited_suffixes = {
+              ".drawio", ".log", ".plantuml", ".puml",
+              ".pyc", ".pyo", ".svg", ".uml",
+          }
+          expected_modules = {path.as_posix()
+                              for path in Path("paramws").rglob("*.py")
+                              if "tests" not in path.parts}
+
+          for label, names in (("wheel", wheel_names), ("sdist", sdist_names)):
+              print(f"{label} contents:\n  " + "\n  ".join(sorted(names)))
+              prohibited = [name for name in names
+                            if prohibited_parts.intersection(
+                                PurePosixPath(name).parts)
+                            or PurePosixPath(name).suffix.lower()
+                            in prohibited_suffixes
+                            or name.endswith((".tar.gz", ".whl"))]
+              if prohibited:
+                  raise SystemExit(f"Prohibited {label} content: {prohibited}")
+              missing = expected_modules.difference(names)
+              if missing:
+                  raise SystemExit(f"Missing {label} modules: {sorted(missing)}")
+              unexpected = {name for name in names if name.endswith(".py")
+                            and not name.startswith("paramws/")}
+              if unexpected:
+                  raise SystemExit(f"Unexpected {label} modules: {unexpected}")
+
+          expected = {"Name": "paramws-clients", "Version": "0.1.0",
+                      "Requires-Python": ">=3.9"}
+          for label, metadata in (("wheel", wheel_metadata),
+                                  ("sdist", sdist_metadata)):
+              actual = {field: metadata[field] for field in expected}
+              if actual != expected:
+                  raise SystemExit(f"Unexpected {label} metadata: {actual}")
+              if metadata.get_all("Requires-Dist", []) != ["xmltodict==0.12.0"]:
+                  raise SystemExit(f"Unexpected {label} runtime dependencies")
+
+          if "pyproject.toml" not in sdist_names:
+              raise SystemExit("Source distribution is missing pyproject.toml")
+          if not any(name.endswith(".dist-info/WHEEL") for name in wheel_names):
+              raise SystemExit("Wheel is missing its WHEEL metadata")
+          PY
+
+      - name: Verify imports from an installed wheel
+        run: |
+          install_target="${RUNNER_TEMP}/paramws-installed"
+          outside_directory="${RUNNER_TEMP}/paramws-import-check"
+          mkdir -p "$install_target" "$outside_directory"
+          python -m pip install --target "$install_target" dist/*.whl
+          cd "$outside_directory"
+          # Running outside the checkout ensures only the installed target can
+          # satisfy paramws imports; the Python check also proves every origin.
+          PYTHONPATH="$install_target" \
+            PARAMWS_INSTALL_TARGET="$install_target" \
+            PARAMWS_LOG_FILE="${outside_directory}/paramws.log" \
+            python - <<'PY'
+          from importlib import import_module
+          from importlib.metadata import distribution
+          from pathlib import Path
+          import os
+          import sys
+
+          clients = import_module("paramws.clients")
+          for name in clients.__all__:
+              getattr(clients, name)
+
+          expected_imports = {
+              "paramws.clients.base_client": ("MissingRequiredOption",),
+              "paramws.clients.services": (
+                  "BaseWebServiceConnector", "EMSCFeltReportConnector",
+                  "ESMShakeMapConnector", "InvalidOptionValue",
+                  "InvalidQueryOption", "MissingRequiredFieldError",
+                  "RRSMPeakMotionConnector", "RRSMShakeMapConnector",
+                  "USGSComCatConnector",
+              ),
+              "paramws.clients.services.peakmotion_data": ("PeakMotionEventData",),
+              "paramws.clients.services.usgs": (
+                  "DatasetNotAvailableError", "USGSComCatParser",
+              ),
+          }
+          for module_name, names in expected_imports.items():
+              module = import_module(module_name)
+              for name in names:
+                  getattr(module, name)
+
+          install_target = Path(os.environ["PARAMWS_INSTALL_TARGET"]).resolve()
+
+          def is_under_target(path):
+              path = path.resolve()
+              return path == install_target or install_target in path.parents
+
+          imported_paths = {
+              name: Path(module.__file__).resolve()
+              for name, module in sys.modules.items()
+              if name == "paramws" or name.startswith("paramws.")
+              if getattr(module, "__file__", None)
+          }
+          outside_target = {
+              name: str(path)
+              for name, path in imported_paths.items()
+              if not is_under_target(path)
+          }
+          if outside_target:
+              raise SystemExit(f"Imports escaped the target: {outside_target}")
+
+          installed_distribution = distribution("paramws-clients")
+          if not is_under_target(Path(installed_distribution.locate_file(""))):
+              raise SystemExit("Distribution metadata did not come from the target")
+          if (installed_distribution.version, installed_distribution.requires) != (
+              "0.1.0", ["xmltodict==0.12.0"]
+          ):
+              raise SystemExit("Installed distribution metadata is incorrect")
+          print(f"Verified {len(imported_paths)} modules under {install_target}")
+          PY
+
   live-integration-tests:
     # Pull requests intentionally avoid external providers so review checks remain offline.
     if: >-
