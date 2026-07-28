@@ -8,6 +8,7 @@ import urllib.parse
 import zipfile
 
 from paramws.clients import EMSCFeltReportClient
+from paramws.clients.base_client import MissingRequiredOption
 from paramws.clients.services import EMSCFeltReportConnector
 from paramws.clients.services.feltreport_data import (
     FeltReportEventData,
@@ -139,7 +140,7 @@ class TestEMSCClient(unittest.TestCase):
         client.felt_report_options["temporary"] = "old"
         client.event_data_options["temporary"] = "old"
 
-        with self.assertRaisesRegex(ValueError, "event_id"):
+        with self.assertRaisesRegex(MissingRequiredOption, "event_id"):
             client.query(event_id=None)
 
         self.assertIsNone(client.get_event_id())
@@ -173,6 +174,7 @@ class TestEMSCClient(unittest.TestCase):
         self.assertEqual(code, 200)
         self.assertIs(event_data, expected_event)
         self.assertIsInstance(event_data, FeltReportEventData)
+        self.assertIs(type(datasets), dict)
         self.assertEqual(set(datasets), {"felt_intensities"})
         self.assertIs(datasets["felt_intensities"], expected_intensities)
         self.assertIsInstance(

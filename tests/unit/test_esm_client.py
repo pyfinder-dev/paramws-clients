@@ -4,6 +4,7 @@ import unittest
 import urllib.parse
 
 from paramws.clients import ESMShakeMapClient
+from paramws.clients.base_client import MissingRequiredOption
 from paramws.clients.services import ESMShakeMapConnector
 from paramws.clients.services.baseconnector import InvalidOptionValue
 from paramws.clients.services.shakemap_data import ShakeMapEventData
@@ -97,13 +98,15 @@ class TestESMClient(unittest.TestCase):
         client.set_event_id("previous-event")
         client.set_event_data(event_model("previous-event"))
         client.set_station_amplitudes(amplitude_model())
+        client.get_web_service().set_data("previous response")
 
-        with self.assertRaisesRegex(ValueError, "event_id"):
+        with self.assertRaisesRegex(MissingRequiredOption, "event_id"):
             client.query(event_id=None)
 
         self.assertIsNone(client.get_event_id())
         self.assertIsNone(client.get_event_data())
         self.assertEqual(client.get_datasets(), {"station_amplitudes": None})
+        self.assertIsNone(client.get_web_service().get_data())
 
     def test_success_returns_exact_models_and_dataset_dictionary(self):
         expected_event = event_model()
@@ -122,6 +125,7 @@ class TestESMClient(unittest.TestCase):
         self.assertEqual(code, 200)
         self.assertIs(event_data, expected_event)
         self.assertIsInstance(event_data, ShakeMapEventData)
+        self.assertIs(type(datasets), dict)
         self.assertEqual(set(datasets), {"station_amplitudes"})
         self.assertIs(datasets["station_amplitudes"], expected_amplitudes)
         self.assertIsInstance(

@@ -110,6 +110,7 @@ class TestUSGSComCatClientSuccess(unittest.TestCase):
         code, event_data, datasets = result
         self.assertEqual(code, 200)
         self.assertIsInstance(event_data, ShakeMapEventData)
+        self.assertIs(type(datasets), dict)
         self.assertEqual(set(datasets), {"shakemap"})
         self.assertIsInstance(
             datasets["shakemap"],
@@ -135,6 +136,7 @@ class TestUSGSComCatClientSuccess(unittest.TestCase):
 
         self.assertEqual(code, 200)
         self.assertIsInstance(event_data, ShakeMapEventData)
+        self.assertIs(type(datasets), dict)
         self.assertEqual(set(datasets), {"dyfi"})
         self.assertIsInstance(datasets["dyfi"], FeltReportIntensityData)
         self.assertEqual(scripted.requested_urls, [
@@ -153,6 +155,7 @@ class TestUSGSComCatClientSuccess(unittest.TestCase):
 
         self.assertEqual(code, 200)
         self.assertIsInstance(event_data, ShakeMapEventData)
+        self.assertIs(type(datasets), dict)
         self.assertEqual(set(datasets), {"shakemap", "dyfi"})
         self.assertIsInstance(
             datasets["shakemap"],

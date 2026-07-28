@@ -6,6 +6,7 @@ import urllib.parse
 from unittest.mock import patch
 
 from paramws.clients import RRSMShakeMapClient, RRSMPeakMotionClient
+from paramws.clients.base_client import MissingRequiredOption
 from paramws.clients.services import (
     RRSMPeakMotionConnector,
     RRSMShakeMapConnector,
@@ -167,7 +168,7 @@ class TestRRSMClient(unittest.TestCase):
         client.set_station_amplitudes(amplitude_model())
         client.get_web_service().set_data("previous response")
 
-        with self.assertRaisesRegex(ValueError, "event_id"):
+        with self.assertRaisesRegex(MissingRequiredOption, "event_id"):
             client.query(event_id=None)
 
         self.assertIsNone(client.get_event_id())
@@ -192,6 +193,7 @@ class TestRRSMClient(unittest.TestCase):
         self.assertEqual(code, 200)
         self.assertIs(event_data, expected_event)
         self.assertIsInstance(event_data, ShakeMapEventData)
+        self.assertIs(type(datasets), dict)
         self.assertEqual(set(datasets), {"station_amplitudes"})
         self.assertIs(datasets["station_amplitudes"], expected_amplitudes)
         self.assertIsInstance(
@@ -462,6 +464,7 @@ class TestRRSMClient(unittest.TestCase):
             event_data,
             expected_peak_motion.get_event_data(),
         )
+        self.assertIs(type(datasets), dict)
         self.assertEqual(set(datasets), {"peak_motion"})
         self.assertIs(datasets["peak_motion"], expected_peak_motion)
         self.assertIsInstance(datasets["peak_motion"], PeakMotionData)
@@ -533,7 +536,7 @@ class TestRRSMClient(unittest.TestCase):
         client.set_station_amplitudes(peak_motion_model("previous-event"))
         client.get_web_service().set_data("previous response")
 
-        with self.assertRaisesRegex(ValueError, "event_id"):
+        with self.assertRaisesRegex(MissingRequiredOption, "event_id"):
             client.query(event_id=None)
 
         self.assertIsNone(client.get_event_id())

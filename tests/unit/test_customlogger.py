@@ -247,8 +247,16 @@ class TestPackageLogger(unittest.TestCase):
         output = stream.getvalue()
         for message in ("debug", "info", "warning", "error", "critical", "ok"):
             self.assertIn(message, output)
-        self.assertGreaterEqual(output.count("\x1b["), len(messages))
-        self.assertIn("\x1b[92mOK", output)
+        expected_colored_levels = (
+            "\x1b[95mDEBUG   \x1b[0m",
+            "\x1b[38;20mINFO    \x1b[0m",
+            "\x1b[33;20mWARNING \x1b[0m",
+            "\x1b[31;20mERROR   \x1b[0m",
+            "\x1b[31;1mCRITICAL\x1b[0m",
+            "\x1b[92mOK      \x1b[0m",
+        )
+        for colored_level in expected_colored_levels:
+            self.assertIn(colored_level, output)
         self.assertFalse(Path("paramws.log").exists())
 
     def test_unusable_file_falls_back_once_and_warns_with_the_cause(self):
@@ -272,7 +280,7 @@ class TestPackageLogger(unittest.TestCase):
         )
         self.assertIn(str(failed_path), output)
         self.assertIn("No such file or directory", output)
-        self.assertIn("WARNING", output)
+        self.assertIn("\x1b[33;20mWARNING \x1b[0m", output)
         self.assertFalse(failed_path.exists())
 
     def test_rotation_retains_no_more_than_seven_backups(self):

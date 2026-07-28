@@ -103,7 +103,7 @@ class TestUSGSComCatEventParser(unittest.TestCase):
         for supplied_data in inputs:
             with self.subTest(input_type=type(supplied_data).__name__):
                 event = USGSComCatParser().parse_event_detail(supplied_data)
-                self.assertIsInstance(event, ShakeMapEventData)
+                self.assertIs(type(event), ShakeMapEventData)
                 self.assertEqual(event.get_event_id(), "ci38457511")
 
     def test_event_geometry_and_provider_properties_keep_native_meaning(self):
@@ -378,13 +378,19 @@ class TestUSGSShakeMapStationListParser(unittest.TestCase):
         data = self.parser.parse_shakemap_station_list(
             fixture_bytes("usgs-shakemap-stationlist.json"))
 
-        self.assertIsInstance(data, ShakeMapStationAmplitudes)
+        self.assertIs(type(data), ShakeMapStationAmplitudes)
         self.assertEqual(len(data.get_stations()), 2)
         station = data.get_stations()[0]
-        self.assertIsInstance(station, ShakeMapStationNode)
+        self.assertIs(type(station), ShakeMapStationNode)
         self.assertEqual(station.get_station_id(), "CI.CLC")
         self.assertEqual(station.get_station_type(), "seismic")
-        self.assertEqual(station.get_geometry()["type"], "Point")
+        self.assertEqual(
+            station.get_geometry(),
+            {
+                "type": "Point",
+                "coordinates": [-117.59751, 35.81574],
+            },
+        )
         self.assertEqual(station.get_longitude(), -117.59751)
         self.assertEqual(station.get_latitude(), 35.81574)
         self.assertEqual(station.get_intensity(), 7.1)
@@ -395,7 +401,7 @@ class TestUSGSShakeMapStationListParser(unittest.TestCase):
         self.assertEqual(len(station.get_components()), 2)
 
         component = station.get_components()[0]
-        self.assertIsInstance(component, ShakeMapComponentNode)
+        self.assertIs(type(component), ShakeMapComponentNode)
         self.assertEqual(component.get_component_name(), "--.HNZ")
         self.assertEqual(component.get_acceleration(), 75.4)
         self.assertEqual(component.get_acceleration_units(), "%g")
@@ -407,12 +413,15 @@ class TestUSGSShakeMapStationListParser(unittest.TestCase):
         self.assertEqual(component.get_velocity_uncertainty(), 0.15)
         self.assertEqual(component.get_psa03(), 138.8)
         self.assertEqual(component.get_psa03_units(), "%g")
+        self.assertEqual(component.get_psa03_flag(), "0")
         self.assertEqual(component.get_psa03_uncertainty(), 0.18)
         self.assertEqual(component.get_psa10(), 96.1)
         self.assertEqual(component.get_psa10_units(), "%g")
+        self.assertEqual(component.get_psa10_flag(), "0")
         self.assertEqual(component.get_psa10_uncertainty(), 0.2)
         self.assertEqual(component.get_psa30(), 41.7)
         self.assertEqual(component.get_psa30_units(), "%g")
+        self.assertEqual(component.get_psa30_flag(), "0")
         self.assertEqual(component.get_psa30_uncertainty(), 0.24)
 
     def test_macroseismic_station_without_components_keeps_native_fields(self):
@@ -420,9 +429,16 @@ class TestUSGSShakeMapStationListParser(unittest.TestCase):
             fixture_bytes("usgs-shakemap-stationlist.json"))
         station = data.get_stations()[1]
 
-        self.assertIsInstance(station, ShakeMapStationNode)
+        self.assertIs(type(station), ShakeMapStationNode)
         self.assertEqual(station.get_station_id(), "DYFI.91052")
         self.assertEqual(station.get_station_type(), "macroseismic")
+        self.assertEqual(
+            station.get_geometry(),
+            {
+                "type": "Point",
+                "coordinates": [-117.61, 35.77],
+            },
+        )
         self.assertEqual(station.get_components(), [])
         self.assertEqual(station.get_intensity(), 7.4)
         self.assertEqual(station.get_intensity_uncertainty(), 0.58)
@@ -576,7 +592,7 @@ class TestUSGSDYFIParser(unittest.TestCase):
         data = self.parser.parse_dyfi_1km(
             fixture_bytes("usgs-dyfi-1km.geojson"))
 
-        self.assertIsInstance(data, FeltReportIntensityData)
+        self.assertIs(type(data), FeltReportIntensityData)
         self.assertEqual(data.get("bbox"), fixture["bbox"])
         self.assertEqual(len(data.get_intensities()), 2)
         intensity = data.get_intensities()[0]
