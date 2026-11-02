@@ -381,6 +381,38 @@ class TestESMClient(unittest.TestCase):
             {"station_amplitudes": None},
         )
 
+    def test_query_retains_station_dataset_with_explicit_unknown_component_depth(self):
+        station_xml = (
+            '<stationlist created="1685534294">'
+            '<station code="ONE" netid="NW" lat="42.0" lon="13.0">'
+            '<comp name="00.HNE" depth="None"><acc value="12.5" flag="0"/></comp>'
+            '<comp name="00.HNN" depth="0"><acc value="6.25" flag="1"/></comp>'
+            '</station></stationlist>'
+        )
+        client = ESMShakeMapClient()
+        scripted_request = ScriptedRequest([
+            (200, EVENT_XML),
+            (200, station_xml),
+        ])
+        client.get_web_service()._request_callable = scripted_request.request
+        client.get_web_service()._delay_callable = scripted_request.delay
+
+        code, event_data, datasets = client.query(event_id="event-one")
+
+        self.assertEqual(code, 200)
+        self.assertEqual(event_data.get_event_id(), "event-one")
+        amplitudes = datasets["station_amplitudes"]
+        self.assertIs(amplitudes, client.get_station_amplitudes())
+        components = amplitudes.get_stations()[0].get_components()
+        self.assertEqual(len(components), 2)
+        self.assertIsNone(components[0].get_component_depth())
+        self.assertEqual(components[0].get_acceleration(), 12.5)
+        self.assertEqual(components[0].get_acceleration_flag(), "0")
+        self.assertEqual(components[1].get_acceleration(), 6.25)
+        self.assertEqual(components[1].get_acceleration_flag(), "1")
+        self.assertEqual(len(scripted_request.requested_urls), 2)
+        self.assertEqual(scripted_request.recorded_delays, [])
+
 
 if __name__ == "__main__":
     unittest.main()

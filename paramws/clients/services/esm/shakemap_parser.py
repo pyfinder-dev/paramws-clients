@@ -83,6 +83,11 @@ class ESMShakeMapParser(BaseParser):
         depth = component_xml.get('@depth')
         if depth is None:
             component['depth'] = 0.0
+        elif depth == 'None':
+            # ESM can explicitly mark unavailable component depth with this
+            # string. Keep that metadata unknown without discarding amplitudes;
+            # the existing omitted-attribute default remains unchanged.
+            component['depth'] = None
         else:
             try:
                 component['depth'] = float(depth)

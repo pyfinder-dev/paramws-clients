@@ -165,6 +165,96 @@ class TestESMShakeMapParser(unittest.TestCase):
         self.assertEqual(component.get_acceleration_flag(), "1")
         self.assertIsNone(component.get_velocity())
 
+    def test_explicit_unknown_component_depth_retains_measurements_and_siblings(self):
+        xml = """
+        <stationlist created="1685534294">
+          <station code="ONE" netid="NW">
+            <comp name="00.HNE" depth="None">
+              <acc value="12.5" flag="0"/>
+              <vel value="1.25" flag="1"/>
+            </comp>
+            <comp name="00.HNN" depth="0"><acc value="6.25" flag="0"/></comp>
+            <comp name="00.HNZ" depth="1.5"><acc value="3.5" flag="2"/></comp>
+          </station>
+          <station code="TWO" netid="NW">
+            <comp name="HNZ"><acc value="2.5" flag="0"/></comp>
+          </station>
+        </stationlist>
+        """
+
+        # RRSM inherits this optional-metadata handling but retains its own
+        # provider-specific errors for fields that genuinely cannot be parsed.
+        for parser_class in (ESMShakeMapParser, RRSMShakeMapParser):
+            with self.subTest(parser=parser_class.__name__):
+                stations = parser_class().parse(xml).get_stations()
+                self.assertEqual(
+                    [station.get_station_id() for station in stations],
+                    ["NW.ONE", "NW.TWO"],
+                )
+                components = stations[0].get_components()
+                self.assertEqual(
+                    [component.get_component_name() for component in components],
+                    ["00.HNE", "00.HNN", "00.HNZ"],
+                )
+                self.assertIsNone(components[0].get_component_depth())
+                self.assertEqual(components[0].get_acceleration(), 12.5)
+                self.assertEqual(components[0].get_acceleration_flag(), "0")
+                self.assertEqual(components[0].get_velocity(), 1.25)
+                self.assertEqual(components[0].get_velocity_flag(), "1")
+                self.assertEqual(components[1].get_component_depth(), 0.0)
+                self.assertEqual(components[1].get_acceleration(), 6.25)
+                self.assertEqual(components[2].get_component_depth(), 1.5)
+                self.assertEqual(components[2].get_acceleration_flag(), "2")
+                self.assertEqual(
+                    stations[1].get_components()[0].get_component_depth(),
+                    0.0,
+                )
+                self.assertEqual(
+                    stations[1].get_components()[0].get_acceleration(),
+                    2.5,
+                )
+
+    def test_unknown_component_depth_does_not_relax_required_numeric_fields(self):
+        for parser_class, provider in (
+            (ESMShakeMapParser, "ESM"),
+            (RRSMShakeMapParser, "RRSM/ORFEUS"),
+        ):
+            for depth in ("", "not-a-number", "none"):
+                xml = (
+                    '<stationlist><station code="ONE" netid="NW">'
+                    '<comp name="00.HNE" depth="{}">'
+                    '<acc value="12.5" flag="0"/>'
+                    '</comp></station></stationlist>'
+                ).format(depth)
+                with self.subTest(parser=provider, depth=depth):
+                    with self.assertRaisesRegex(
+                        ValueError, provider + ".*malformed numeric @depth",
+                    ):
+                        parser_class().parse(xml)
+
+            bad_amplitude = (
+                '<stationlist><station code="ONE" netid="NW">'
+                '<comp name="00.HNE" depth="None">'
+                '<acc value="None" flag="0"/>'
+                '</comp></station></stationlist>'
+            )
+            with self.subTest(parser=provider, field="acc"):
+                with self.assertRaisesRegex(
+                    ValueError, provider + ".*field 'acc'.*malformed numeric",
+                ):
+                    parser_class().parse(bad_amplitude)
+
+            bad_event_depth = (
+                '<earthquake id="event-one" lat="1" lon="2" depth="None" '
+                'mag="4" year="2026" month="7" day="27" hour="1" '
+                'minute="2" second="3"/>'
+            )
+            with self.subTest(parser=provider, field="event depth"):
+                with self.assertRaisesRegex(
+                    ValueError, provider + ".*event XML.*numeric.*@depth",
+                ):
+                    parser_class().parse_earthquake(bad_event_depth)
+
     def test_optional_station_fields_and_components_may_be_absent(self):
         xml = """
         <stationlist created="1685534294">
