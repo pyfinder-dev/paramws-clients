@@ -45,7 +45,10 @@ def require_live_result(provider, operation, request):
         )
 
     status = result[0]
-    if status == 429:
+    if (
+            isinstance(status, int)
+            and not isinstance(status, bool)
+            and status == 429):
         raise unittest.SkipTest(
             "{} {} unavailable: category=rate limiting; status=429"
             .format(provider, operation)

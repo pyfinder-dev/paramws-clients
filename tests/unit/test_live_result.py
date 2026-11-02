@@ -76,14 +76,20 @@ class TestLiveResultClassification(unittest.TestCase):
         self.assertIs(caught_parsing.exception, parsing_error)
 
     def test_unexpected_statuses_and_result_shapes_remain_failures(self):
-        for status in (None, 200.0, 201, 400, 404, 499, 600):
+        for status in (None, 200.0, 201, 400, 404, 429.0, 499, 600):
             with self.subTest(status=status):
-                with self.assertRaisesRegex(
-                        AssertionError, "unexpected HTTP status"):
-                    require_live_result(
-                        "ExampleProvider",
-                        "event dataset",
-                        lambda status=status: (status, None),
+                try:
+                    with self.assertRaisesRegex(
+                            AssertionError, "unexpected HTTP status"):
+                        require_live_result(
+                            "ExampleProvider",
+                            "event dataset",
+                            lambda status=status: (status, None),
+                        )
+                except unittest.SkipTest as error:
+                    # unittest must not hide a classification defect as a skip.
+                    self.fail(
+                        "Malformed status {!r} was skipped: {}".format(status, error)
                     )
 
         for result in (None, [], (), {"status": 200}):

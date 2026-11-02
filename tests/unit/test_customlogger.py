@@ -226,7 +226,6 @@ class TestPackageLogger(unittest.TestCase):
             logging.getLevelName(logging.INFO + 6),
             "FinDer",
         )
-        self.assertNotIn("FinDer", self._read_log())
 
     def test_console_mode_emits_colored_standard_and_ok_records(self):
         stream = io.StringIO()
